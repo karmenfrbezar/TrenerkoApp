@@ -10,16 +10,11 @@ const routes = [
       { path: 'unos-objekata', component: () => import('pages/UnosObjekataPage.vue') },
       { path: 'pretraga', component: () => import('pages/PretragaObjekataPage.vue') },
       { path: 'rezervacije', component: () => import('pages/RezervacijePage.vue') },
-      { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') }
+      { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') },
+      { path: 'profil', component: () => import('pages/EditPage.vue') }
     ]
   },
-
-  // Always leave this as last one,
-  // but you can also remove it
-  {
-    path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue')
-  }
+  { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
 ]
 
 export default routes
