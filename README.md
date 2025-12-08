@@ -1,17 +1,7 @@
 # TrenerkoApp
 # Projekt za kolegij Interaktivne web aplikacije
 
-# uloge u projektu:
+uloge u projektu:
 
-# Karmen Frbežar - prikaz lokacije objekata (MapaPage)
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
+Karmen Frbežar - prikaz lokacije objekata (MapaPage)
+
