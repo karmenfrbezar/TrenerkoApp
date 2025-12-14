@@ -12,10 +12,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const connection = mysql.createConnection({
-  host: "ucka.veleri.hr",      // ili tvoj host
-  user: "kfrbezar",           // ili tvoj user
-  password: "11",           // ili tvoja lozinka
-  database: "kfrbezar"    // ime tvoje baze
+  host: "ucka.veleri.hr",      
+  user: "kfrbezar",           
+  password: "11",           
+  database: "kfrbezar"    
 });
 
 connection.connect(err => {
@@ -56,6 +56,25 @@ app.put("/api/user/:id", (req, res) => {
   connection.query(sql, [username, email, id], (err) => {
     if(err) return res.json({ error: err });
     res.json({ success: true });
+  });
+});
+
+// dohvacanje objekata za kartu
+
+app.get("/api/objects", (req, res) => {
+  const sql = `
+    SELECT 
+      ObjektID AS id,
+      NazivObjekta AS naziv,
+      Opis AS opis,
+      ST_X(Lokacija) AS lat,
+      ST_Y(Lokacija) AS lng
+    FROM ISportskiObjekt
+  `;
+
+  connection.query(sql, (err, results) => {
+    if (err) return res.json({ error: err });
+    res.json(results);
   });
 });
 

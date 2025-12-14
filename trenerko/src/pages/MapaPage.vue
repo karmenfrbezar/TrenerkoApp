@@ -3,19 +3,17 @@
 
     <h2 class="q-mb-md">Lokacije sportskih objekata</h2>
 
-    <!-- karta -->
+    <!-- KARTA -->
     <div ref="mapEl" class="map-box"></div>
 
-    <!-- kartice -->
+    <!-- KARTICE -->
     <div class="row q-col-gutter-md q-mt-md">
-
       <div
         class="col-12 col-md-4"
         v-for="obj in objects"
         :key="obj.id"
       >
         <q-card class="bg-white text-dark">
-
           <q-card-section>
             <div class="text-h6">{{ obj.naziv }}</div>
             <div class="text-subtitle2 q-mt-xs">
@@ -30,10 +28,8 @@
               @click="focusObject(obj)"
             />
           </q-card-actions>
-
         </q-card>
       </div>
-
     </div>
 
   </div>
@@ -44,14 +40,13 @@ import { ref, onMounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
+
 import iconUrl from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-const mapEl = ref(null)
-let map
 
 const customIcon = L.icon({
-  iconUrl: iconUrl,
+  iconUrl,
   shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -59,42 +54,39 @@ const customIcon = L.icon({
   shadowSize: [41, 41]
 })
 
+const mapEl = ref(null)
+const objects = ref([])        
+let map = null
+const markers = []             
 
-// mock podaci za sada
-const objects = ref([
-  {
-    id: 1000,
-    naziv: 'Fitness Centar Rijeka',
-    opis: 'Moderna teretana sa saunom i grupnim treninzima.',
-    lat: 45.3317,
-    lng: 14.4325
-  },
-  {
-    id: 1001,
-    naziv: 'Bazeni Kantrida',
-    opis: 'Kompleks bazena na Kantridi mjesto je vrhunskih sportskih manifestacija, profesionalnog sporta, rekreacije i edukacije, mjesto susreta, druženja i zabave.',
-    lat: 45.34103354329373, 
-    lng: 14.37303288708569
-  },
-  {
-    id: 1002,
-    naziv: 'Gimanstički klub Rijeka',
-    opis: 'Treninzi za djecu, mlade i odrasle koji razvijaju svoje gimnastičke elemente i vještine kroz natjecateljske i rekreativne programe uz stručno vodstvo trenera. ',
-    lat: 45.33518624370164, 
-    lng: 14.445217353476576
+
+//dohvacanje podataka iz backenda
+async function loadObjects() {
+  try {
+    const res = await fetch("http://localhost:3000/api/objects")
+    const data = await res.json()
+    objects.value = data
+  } catch (err) {
+    console.error("Greška pri dohvaćanju objekata:", err)
   }
-])
+}
 
-const markers = []
 
-onMounted(() => {
+// prikaz karte i markera
+onMounted(async () => {
+  // inicijalizacija karte
   map = L.map(mapEl.value).setView([45.3312, 14.4322], 13)
 
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+ 
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20,
+    attribution: '© OpenStreetMap contributors'
   }).addTo(map)
 
-  // dodavanje markera za objekte
+  // 1) učitaj podatke iz baze
+  await loadObjects()
+
+  // 2) nacrtaj markere
   objects.value.forEach(obj => {
     const marker = L.marker([obj.lat, obj.lng], { icon: customIcon })
       .addTo(map)
@@ -104,13 +96,21 @@ onMounted(() => {
   })
 })
 
-// fokus na objekt s katice
-function focusObject(obj) {
+
+// fokus za marker na karti
+function focusObject (obj) {
+  if (!map) return
+
   map.setView([obj.lat, obj.lng], 16)
+  map.invalidateSize()
 
   const found = markers.find(m => m.id === obj.id)
   if (found) found.marker.openPopup()
 }
+
+
+
+
 </script>
 
 <style scoped>
