@@ -10,7 +10,7 @@
         <q-btn flat label="Pretraživanje" to="/pretraga" />
         <q-btn flat label="Rezervacije" to="/rezervacije" />
         <q-btn flat label="Recenzije" to="/recenzije" />
-        <q-btn flat label="Dodaj objekte" to="/unos-objekata" />
+        <q-btn flat label="Dodaj objekte" to="/unosobjekata" />
 
         <q-space />
 
