@@ -62,14 +62,14 @@ app.put("/api/user/:id", (req, res) => {
 // dohvacanje objekata za kartu
 app.get("/api/objects", (req, res) => {
   const sql = `
-    SELECT 
-      ObjektID AS id,
-      NazivObjekta AS naziv,
-      Opis AS opis,
-      ST_X(Lokacija) AS lat,
-      ST_Y(Lokacija) AS lng
-    FROM ISportskiObjekt
-  `;
+SELECT
+ObjektID AS id,
+NazivObjekta AS naziv,
+Opis AS opis,
+ST_X(Lokacija) AS lat,
+ST_Y(Lokacija) AS lng
+FROM ISportskiObjekt
+`;
 
   connection.query(sql, (err, results) => {
     if (err) return res.json({ error: err });
@@ -78,9 +78,9 @@ app.get("/api/objects", (req, res) => {
 });
 
 
-
-// SPORTSKI OBJEKTI 
-
+// ==================================================
+// SPORTSKI OBJEKTI - UNOS (ISPRAVLJENA RUTA)
+// ==================================================
 
 app.post("/api/unosobjekata", (req, res) => {
   const {
@@ -100,12 +100,14 @@ app.post("/api/unosobjekata", (req, res) => {
     });
   }
 
+  // KORIGIRANO: Upit koristi .trim() za uklanjanje nevidljivih znakova 
+  // koji su uzrokovali ER_PARSE_ERROR
   const sql = `
-    INSERT INTO ISportskiObjekt
-      (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
-    VALUES
-      (?, ?, ?, ?, ST_PointFromText(?), ?, NOW())
-  `;
+INSERT INTO ISportskiObjekt
+(NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
+VALUES
+(?, ?, ?, ?, ST_PointFromText(?), ?, NOW())
+  `.trim();
 
   // MySQL Spatial funkcija zahtijeva format POINT(lng lat)
   const location = `POINT(${lng} ${lat})`;
