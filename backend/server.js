@@ -7,16 +7,10 @@ const mysql = require("mysql");
 const app = express();
 const port = 3000;
 
-// =======================
-// MIDDLEWARE
-// =======================
-app.use(cors({ origin: "*" }));
+app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// =======================
-// MYSQL CONNECTION
-// =======================
 const connection = mysql.createConnection({
   host: "ucka.veleri.hr",
   user: "kfrbezar",
@@ -25,69 +19,68 @@ const connection = mysql.createConnection({
 });
 
 connection.connect(err => {
-  if (err) {
-    console.error("MySQL error:", err);
-    return;
-  }
+  if (err) throw err;
   console.log("Connected to MySQL!");
 });
 
-// =======================
-// TEST RUTA
-// =======================
-app.get("/", (req, res) => {
-  res.send("API radi");
-});
-
-// ==================================================
-// TERETANE ROUTES 
-// ==================================================
-
-// CREATE - unos nove teretane
-app.post("/api/teretane", (req, res) => {
-  const { name, address, description } = req.body;
-
-  if (!name || !address) {
-    return res.status(400).json({
-      error: "Naziv i adresa su obavezni."
-    });
-  }
-
-  const sql = `
-    INSERT INTO Teretane (name, address, description)
-    VALUES (?, ?, ?)
-  `;
-
-  connection.query(sql, [name, address, description], (err, result) => {
+// REGISTRACIJA
+app.post("/api/register", (req, res) => {
+  const { username, email, password, gender } = req.body;
+  const sql = "INSERT INTO Korisnik (username,email,password,spol, vrijeme_reg) VALUES (?,?,?,?,NOW())";
+  connection.query(sql, [username, email, password, gender], (err, result) => {
     if (err) {
-      console.error("Greška pri unosu:", err);
-      return res.status(500).json({
-        error: "Greška pri unosu u bazu."
-      });
+      res.json({ error: err });
+    } else {
+      res.json({ id: result.insertId, username, email, gender });
     }
-
-    res.status(201).json({
-      id: result.insertId
-    });
   });
 });
 
-// READ - dohvat svih teretana
-app.get("/api/teretane", (req, res) => {
-  const sql = "SELECT * FROM Teretane ORDER BY created_at DESC";
+// LOGIN
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  const sql = "SELECT * FROM Korisnik WHERE username=? AND password=?";
+  connection.query(sql, [username, password], (err, results) => {
+    if (err) return res.json({ error: err });
+    if (results.length === 0) return res.json({ error: "Neispravan username ili lozinka" });
+    const user = results[0];
+    res.json({ id: user.id, username: user.username, email: user.email, gender: user.spol });
+  });
+});
+
+// EDIT USER
+app.put("/api/user/:id", (req, res) => {
+  const { username, email } = req.body;
+  const { id } = req.params;
+  const sql = "UPDATE Korisnik SET username=?, email=? WHERE id=?";
+  connection.query(sql, [username, email, id], (err) => {
+    if (err) return res.json({ error: err });
+    res.json({ success: true });
+  });
+});
+
+// dohvacanje objekata za kartu
+app.get("/api/objects", (req, res) => {
+  const sql = `
+    SELECT 
+      ObjektID AS id,
+      NazivObjekta AS naziv,
+      Opis AS opis,
+      ST_X(Lokacija) AS lat,
+      ST_Y(Lokacija) AS lng
+    FROM ISportskiObjekt
+  `;
 
   connection.query(sql, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Greška pri dohvaćanju" });
-    }
+    if (err) return res.json({ error: err });
     res.json(results);
   });
 });
 
-// ==================================================
+
+
 // SPORTSKI OBJEKTI 
-// ==================================================
+
 
 app.post("/api/unosobjekata", (req, res) => {
   const {
@@ -108,13 +101,13 @@ app.post("/api/unosobjekata", (req, res) => {
   }
 
   const sql = `
-    INSERT INTO ISportskiObjekt
-      (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
-    VALUES
-      (?, ?, ?, ?, ST_PointFromText(?), ?, NOW())
-  `;
+    INSERT INTO ISportskiObjekt
+      (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
+    VALUES
+      (?, ?, ?, ?, ST_PointFromText(?), ?, NOW())
+  `;
 
-  // POINT(lng lat)
+  // MySQL Spatial funkcija zahtijeva format POINT(lng lat)
   const location = `POINT(${lng} ${lat})`;
 
   connection.query(
@@ -136,9 +129,5 @@ app.post("/api/unosobjekata", (req, res) => {
   );
 });
 
-// =======================
-// START SERVER
-// =======================
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+
+app.listen(port, () => console.log(`Server running on port ${port}`));
