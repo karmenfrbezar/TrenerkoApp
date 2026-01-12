@@ -79,7 +79,7 @@ FROM ISportskiObjekt
 
 
 // ==================================================
-// SPORTSKI OBJEKTI - UNOS (ISPRAVLJENA RUTA)
+// SPORTSKI OBJEKTI - UNOS 
 // ==================================================
 
 app.post("/api/unosobjekata", (req, res) => {
@@ -100,8 +100,7 @@ app.post("/api/unosobjekata", (req, res) => {
     });
   }
 
-  // KORIGIRANO: Upit koristi .trim() za uklanjanje nevidljivih znakova 
-  // koji su uzrokovali ER_PARSE_ERROR
+
   const sql = `
 INSERT INTO ISportskiObjekt
 (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
