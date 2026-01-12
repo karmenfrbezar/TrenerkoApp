@@ -130,7 +130,7 @@ app.get("/api/teretane", (req, res) => {
 });
 
 // ==================================================
-// SPORTSKI OBJEKTI - UNOS
+// SPORTSKI OBJEKTI - UNOS 
 // ==================================================
 app.post("/api/unosobjekata", (req, res) => {
   const {
@@ -149,6 +149,8 @@ app.post("/api/unosobjekata", (req, res) => {
     });
   }
 
+  // KORIGIRANO: Upit koristi .trim() za uklanjanje nevidljivih znakova 
+  // koji su uzrokovali ER_PARSE_ERROR
   const sql = `
     INSERT INTO ISportskiObjekt
     (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID, DatumKreiranja)
