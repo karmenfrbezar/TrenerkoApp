@@ -233,6 +233,38 @@ app.put("/api/recenzije/:id", (req, res) => {
   });
 });
 
+// =======================
+// PRETRAGA TERETANA
+// =======================
+app.get("/api/teretane", (req, res) => {
+  const { name, address } = req.query;
+
+  let sql = `
+    SELECT id, name, address, description
+    FROM Teretane
+    WHERE 1 = 1
+  `;
+  const params = [];
+
+  if (name) {
+    sql += " AND name LIKE ?";
+    params.push(`%${name}%`);
+  }
+
+  if (address) {
+    sql += " AND address LIKE ?";
+    params.push(`%${address}%`);
+  }
+
+  connection.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("SQL greška (teretane):", err);
+      return res.status(500).json({ error: "Greška baze" });
+    }
+    res.json(results);
+  });
+});
+
 
 
 app.listen(port, () => {
