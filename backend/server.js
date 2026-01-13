@@ -93,9 +93,9 @@ app.put("/api/user/:id", (req, res) => {
 app.get("/api/objects", (req, res) => {
   const sql = `
     SELECT
-      ObjektID,
-      NazivObjekta,
-      Opis,
+      ObjektID AS id,
+      NazivObjekta AS naziv,
+      Opis AS opis,
       ST_X(Lokacija) AS lat,
       ST_Y(Lokacija) AS lng
     FROM ISportskiObjekt
