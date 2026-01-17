@@ -37,8 +37,10 @@ export default {
       })
       .then(res => res.json())
       .then(data => {
+        console.log("LOGIN DATA:", data);
+
         if(data.error) { message.value = data.error; return; }
-        mainUser.value = { id: data.id, username: data.username, email: data.email, gender: data.gender }
+        mainUser.value = { id: data.id, username: data.username, email: data.email, gender: data.gender, role: data.role, vrijeme_reg: data.vrijeme_reg }
         router.push('/')
       })
       .catch(() => { message.value = "Greška prilikom prijave" })

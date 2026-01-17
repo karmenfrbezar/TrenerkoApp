@@ -65,7 +65,9 @@ app.post("/api/login", (req, res) => {
       id: user.id,
       username: user.username,
       email: user.email,
-      gender: user.spol
+      gender: user.spol,
+      role: user.uloga,
+      vrijeme_reg: user.vrijeme_reg
     });
   });
 });
@@ -264,6 +266,58 @@ app.get("/api/teretane", (req, res) => {
     res.json(results);
   });
 });
+// =======================
+// DOHVAT KORISNIKA (ADMIN)
+// =======================
+app.get("/api/users", (req, res) => {
+  const sql = `
+    SELECT id, username, email, spol AS gender, uloga AS role, vrijeme_reg
+    FROM Korisnik
+    ORDER BY id DESC
+  `;
+
+  connection.query(sql, (err, results) => {
+    if (err) {
+      console.error('/api/users error:', err);
+      return res.status(500).json({ error: err.message || 'DB error' });
+    }
+    res.json(results);
+  });
+});
+
+
+app.delete("/api/users/:id", (req, res) => {
+  const { id } = req.params;
+
+  // 1) prvo dohvatimo korisnika
+  const checkSql = "SELECT uloga FROM Korisnik WHERE id = ?";
+  connection.query(checkSql, [id], (err, results) => {
+    if (err) {
+      console.error('Error checking user role:', err);
+      return res.status(500).json({ error: err.message || 'DB error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Korisnik ne postoji' });
+    }
+
+    // 2) ako je admin, ne dozvoljavamo brisanje
+    if (results[0].uloga === 'admin') {
+      return res.status(403).json({ error: 'Ne možete obrisati admin korisnika' });
+    }
+
+    // 3) ako nije admin, brišemo
+    const deleteSql = "DELETE FROM Korisnik WHERE id = ?";
+    connection.query(deleteSql, [id], (err) => {
+      if (err) {
+        console.error('Delete user error:', err);
+        return res.status(500).json({ error: err.message || 'DB error' });
+      }
+      res.json({ success: true });
+    });
+  });
+});
+
 
 
 

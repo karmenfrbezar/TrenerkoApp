@@ -11,7 +11,9 @@ const routes = [
       { path: 'pretraga', component: () => import('pages/PretragaObjekataPage.vue') },
       { path: 'rezervacije', component: () => import('pages/RezervacijePage.vue') },
       { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') },
-      { path: 'profil', component: () => import('pages/EditPage.vue') }
+      { path: 'profil', component: () => import('pages/EditPage.vue') },
+      { path: 'admin', component: () => import('pages/AdminUsers.vue') }
+
     ]
   },
   { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
