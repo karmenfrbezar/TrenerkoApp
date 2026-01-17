@@ -3,5 +3,7 @@
 
 uloge u projektu:
 
-Karmen Frbežar - prikaz lokacije objekata (MapaPage)
+Karmen Frbežar - prikaz lokacije objekata (MapaPage)  
+
+
 Edi Jožić - Registracija,Login i logout,Admin konzola,admin/users rute
