@@ -7,3 +7,6 @@ Karmen Frbežar - prikaz lokacije objekata (MapaPage)
 
 
 Edi Jožić - Registracija,Login i logout,Admin konzola,admin/users rute
+
+
+Luka Božić- Pretraga objekata sa filterima za ime i adresu (PretragaObjekataPage)
