@@ -54,6 +54,15 @@ const customIcon = L.icon({
   shadowSize: [41, 41]
 })
 
+const userIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+})
+
 const mapEl = ref(null)
 const objects = ref([])        
 let map = null
@@ -70,6 +79,31 @@ async function loadObjects() {
     console.error("Greška pri dohvaćanju objekata:", err)
   }
 }
+function showUserLocation () {
+  if (!navigator.geolocation) {
+    console.warn('Geolokacija nije podržana u browseru')
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude
+      const lng = position.coords.longitude
+
+      L.marker([lat, lng], { icon: userIcon })
+        .addTo(map)
+        .bindPopup('Moja lokacija')
+        .openPopup()
+
+      // centriranje kartre na korisnika
+      map.setView([lat, lng], 14)
+    },
+    error => {
+      console.error('Greška kod dohvaćanja lokacije:', error.message)
+    }
+  )
+}
+
 
 
 // prikaz karte i markera
@@ -94,6 +128,7 @@ onMounted(async () => {
 
     markers.push({ id: obj.id, marker })
   })
+  showUserLocation()
 })
 
 

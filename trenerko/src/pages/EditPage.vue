@@ -14,6 +14,8 @@
 
       <!-- Polja za read-only prikaz -->
       <q-input filled v-model="gender" label="Spol" readonly class="q-mb-md"/>
+      <q-input filled v-model="role" label="Uloga" readonly class="q-mb-md"/>
+      <q-input filled v-model="vrijeme_reg" label="Vrijeme registracije" readonly class="q-mb-md"/>
 
     </q-card>
   </div>
@@ -33,11 +35,17 @@ export default {
 
     // Read-only polja
     const gender = ref('')
+    const role = ref('')
+    const vrijeme_reg = ref('')
+
 
 
     onMounted(() => {
       // Inicijaliziramo read-only podatke iz mainUser
-      gender.value = mainUser.value.gender || 'Nije postavljeno'
+      gender.value = mainUser.value.gender || 'Nije postavljeno',
+      role.value = mainUser.value.role || 'Nije postavljeno',
+      vrijeme_reg.value = mainUser.value.vrijeme_reg || 'Nije postavljeno'
+
 
     })
 
@@ -63,7 +71,7 @@ export default {
       })
     }
 
-    return { username, email, message, gender, saveProfile }
+    return { username, email, message, gender, role, vrijeme_reg, saveProfile }
   }
 }
 </script>

@@ -8,17 +8,28 @@
         <q-btn flat label="Početna" to="/" />
         <q-btn flat label="Sportski objekti" to="/mapa" />
         <q-btn flat label="Pretraživanje" to="/pretraga" />
-        <q-btn flat label="Rezervacije" to="/rezervacije" />
+        <q-btn v-if="isLoggedIn" flat label="REZERVACIJE" to="/rezervacije" />
         <q-btn flat label="Recenzije" to="/recenzije" />
-        <q-btn flat label="Dodaj objekte" to="/unosobjekata" />
+        <q-btn v-if="isAdmin" flat label="Dodaj objekte" to="/unosobjekata" />
+
+        <!-- POSEBAN ADMIN GUMB -->
+        <q-btn
+          v-if="isAdmin"
+          unelevated
+          color="orange"
+          icon="shield"
+          label="Admin"
+          to="/admin"
+          class="q-ml-md"
+        />
 
         <q-space />
 
         <!-- Login/Registracija ili Username + Logout -->
         <template v-if="!currentUser">
-  <q-btn flat label="Login" to="/login" class="bg-orange text-white" />
-  <q-btn flat label="Registracija" to="/registracija" />
-</template>
+          <q-btn flat label="Login" to="/login" class="bg-orange text-white" />
+          <q-btn flat label="Registracija" to="/registracija" />
+        </template>
 
         <template v-else>
           <q-btn flat :label="currentUser.username" to="/profil"/>
@@ -34,13 +45,14 @@
 </template>
 
 <script>
-import { ref, provide } from 'vue'
+import { ref, provide, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 export default {
   setup() {
     const router = useRouter()
     const currentUser = ref(null)
+
     provide('user', currentUser)
 
     const logout = () => {
@@ -48,7 +60,10 @@ export default {
       router.push('/')
     }
 
-    return { currentUser, logout }
+    const isLoggedIn = computed(() => !!currentUser.value)
+    const isAdmin = computed(() => currentUser.value?.role === 'admin')
+
+    return { currentUser, logout, isLoggedIn, isAdmin }
   }
 }
 </script>
