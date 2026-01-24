@@ -266,7 +266,43 @@ app.get("/api/teretane", (req, res) => {
     res.json(results);
   });
 });
-<<<<<<< HEAD
+
+// ==================================================
+// PREGLED REZERVACIJA
+// ==================================================
+app.get("/api/rezervacije", (req, res) => {
+  const { gym } = req.query;
+
+  let sql = `
+    SELECT 
+      r.id,
+      k.username,
+      t.name AS gym_name,
+      DATE_FORMAT(r.reservation_date, '%d.%m.%Y %H:%i') AS reservation_date
+    FROM Rezervacije r
+    JOIN Korisnik k ON r.user_id = k.id
+    JOIN Teretane t ON r.gym_id = t.id
+    WHERE 1 = 1
+  `;
+
+  const params = [];
+
+  if (gym) {
+    sql += " AND t.name LIKE ?";
+    params.push(`%${gym}%`);
+  }
+
+  connection.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("Greška baze:", err);
+      return res.status(500).json({ error: "DB error" });
+    }
+
+    res.json(results);
+  });
+});
+
+
 
 // ==================================================
 // SPORTSKI OBJEKTI - UNOS 
@@ -282,19 +318,35 @@ app.post("/api/unosobjekata", (req, res) => {
     vlasnikId
   } = req.body;
 
-  if (!naziv || !adresa || !kontakt || lat === null || lng === null) {
+  if (!naziv || !adresa || !kontakt || lat == null || lng == null) {
     return res.status(400).json({
       error: "Nedostaju obavezna polja"
     });
   }
 
+  const sql = `
+    INSERT INTO ISportskiObjekt
+    (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID)
+    VALUES (?, ?, ?, ?, POINT(?, ?), ?)
+  `;
 
-=======
+  connection.query(
+    sql,
+    [naziv, adresa, opis, kontakt, lat, lng, vlasnikId || null],
+    (err, result) => {
+      if (err) {
+        console.error("Greška kod unosa objekta:", err);
+        return res.status(500).json({ error: "DB error" });
+      }
+
+      res.json({ success: true, insertedId: result.insertId });
+    }
+  );
+});
 // =======================
 // DOHVAT KORISNIKA (ADMIN)
 // =======================
 app.get("/api/users", (req, res) => {
->>>>>>> feb605e2ec8413d094701978da721ecdda4c2919
   const sql = `
     SELECT id, username, email, spol AS gender, uloga AS role, vrijeme_reg
     FROM Korisnik
@@ -342,9 +394,6 @@ app.delete("/api/users/:id", (req, res) => {
     });
   });
 });
-
-
-
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
