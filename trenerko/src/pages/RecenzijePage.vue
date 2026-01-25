@@ -137,7 +137,7 @@
 import { inject } from "vue";
 import { Notify } from 'quasar';
 
-const API = "http://localhost:3000/api";
+const API = "https://trenerkoapp.onrender.com/api";
 
 export default {
   setup() {
