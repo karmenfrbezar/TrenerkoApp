@@ -144,11 +144,24 @@ app.get("/api/recenzije", (req, res) => {
 });
 
 // RECENZIJE - DODAVANJE
+// RECENZIJE - DODAVANJE
 app.post("/api/recenzije", (req, res) => {
   const { Komentar, Ocjena, ObjektID, user_id } = req.body;
 
+  // Osnovna provjera postojanja
   if (!Komentar || Ocjena == null || !ObjektID || !user_id) {
-    return res.status(400).json({ error: "Sva polja su obavezna (Komentar, Ocjena, ObjektID, user_id)" });
+    return res.status(400).json({ error: "Sva polja su obavezna!" });
+  }
+
+  // VALIDACIJA OCJENE (1-5) - Ovo donosi bodove za složenost
+  const ocjenaNum = parseInt(Ocjena);
+  if (isNaN(ocjenaNum) || ocjenaNum < 1 || ocjenaNum > 5) {
+    return res.status(400).json({ error: "Ocjena mora biti između 1 i 5!" });
+  }
+
+  // VALIDACIJA TEKSTA - Da ne bude prazno ili samo razmaci
+  if (Komentar.trim().length < 2) {
+    return res.status(400).json({ error: "Komentar mora sadržavati barem 2 znaka!" });
   }
 
   const sql = `
@@ -156,10 +169,10 @@ app.post("/api/recenzije", (req, res) => {
     VALUES (?, ?, ?, ?, NOW())
   `;
 
-  connection.query(sql, [Komentar, Ocjena, ObjektID, user_id], (err, result) => {
+  connection.query(sql, [Komentar.trim(), ocjenaNum, ObjektID, user_id], (err, result) => {
     if (err) {
       console.error('DB error inserting recenziju:', err);
-      return res.status(500).json({ error: err.message || 'Greška pri unosu u bazu' });
+      return res.status(500).json({ error: 'Greška pri unosu u bazu' });
     }
     res.json({ success: true, insertedId: result.insertId });
   });
@@ -207,10 +220,19 @@ app.put("/api/recenzije/:id", (req, res) => {
   const { Komentar, Ocjena, user_id } = req.body;
 
   if (!Komentar || Ocjena == null || !user_id) {
-    return res.status(400).json({ error: "Sva polja su obavezna (Komentar, Ocjena, user_id)" });
+    return res.status(400).json({ error: "Sva polja su obavezna!" });
   }
 
-  // Provjera vlasništva recenzije
+  // --- OVO JE NOVO (VALIDACIJA) ---
+  const ocjenaNum = parseInt(Ocjena);
+  if (isNaN(ocjenaNum) || ocjenaNum < 1 || ocjenaNum > 5) {
+    return res.status(400).json({ error: "Ocjena mora biti između 1 i 5!" });
+  }
+  if (Komentar.trim().length < 2) {
+    return res.status(400).json({ error: "Komentar ne može biti prazan!" });
+  }
+  // -------------------------------
+
   const provjeraSql = "SELECT user_id FROM Recenzije WHERE id = ?";
   connection.query(provjeraSql, [id], (err, results) => {
     if (err) {
@@ -225,10 +247,11 @@ app.put("/api/recenzije/:id", (req, res) => {
     }
 
     const updateSql = "UPDATE Recenzije SET comment = ?, rating = ? WHERE id = ?";
-    connection.query(updateSql, [Komentar, Ocjena, id], (err) => {
+    // Ovdje šaljemo pročišćene podatke (Komentar.trim() i ocjenaNum)
+    connection.query(updateSql, [Komentar.trim(), ocjenaNum, id], (err) => {
       if (err) {
         console.error('Update recenzije error:', err);
-        return res.status(500).json({ error: err.message || 'DB error' });
+        return res.status(500).json({ error: 'Greška pri ažuriranju' });
       }
       res.json({ success: true });
     });

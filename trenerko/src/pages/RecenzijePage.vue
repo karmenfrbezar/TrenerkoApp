@@ -81,10 +81,27 @@
             label="Sportski objekt"
 
           />
-          <q-input v-model="forma.Komentar" label="Komentar" type="textarea" class="q-mt-md" />
-          <q-input v-model.number="forma.Ocjena" label="Ocjena (1–5)" type="number" min="1" max="5" />
+          <q-input
+  v-model="forma.Komentar"
+  label="Komentar"
+  type="textarea"
+  class="q-mt-md"
+  outlined
+/>
 
-          <div class="row q-mt-md q-gutter-sm">
+<div class="q-mt-lg q-mb-lg text-center">
+  <div class="text-grey-7 q-mb-xs" style="font-size: 1.1em;">Ocjena:</div>
+  <q-rating
+    v-model="forma.Ocjena"
+    size="2.3em"
+    :max="5"
+    color="primary"
+    icon="star_border"
+    icon-selected="star"
+  />
+</div>
+
+<div class="row justify-center q-gutter-sm">
             <q-btn
               :label="view === 'add' ? 'Spremi' : 'Spremi izmjene'"
               color="primary" rounded
@@ -116,7 +133,10 @@
 </template>
 
 <script>
+
 import { inject } from "vue";
+import { Notify } from 'quasar';
+
 const API = "http://localhost:3000/api";
 
 export default {
@@ -160,19 +180,16 @@ export default {
     },
 
     async ucitaj() {
-  const [rec, obj] = await Promise.all([
-    this.api("/recenzije"),
-    this.api("/objects"),
-  ]);
-
-  this.recenzije = rec;
-
-  this.objekti = obj.map(o => ({
-    ObjektID: o.ObjektID ?? o.id,
-    NazivObjekta: o.NazivObjekta ?? o.naziv ?? o.name
-  }));
-},
-
+      const [rec, obj] = await Promise.all([
+        this.api("/recenzije"),
+        this.api("/objects"),
+      ]);
+      this.recenzije = rec;
+      this.objekti = obj.map(o => ({
+        ObjektID: o.ObjektID ?? o.id,
+        NazivObjekta: o.NazivObjekta ?? o.naziv ?? o.name
+      }));
+    },
 
     canDelete(r) {
       return this.mainUser && r.user_id === this.mainUser.id;
@@ -185,20 +202,68 @@ export default {
     },
 
     async dodaj() {
+      // PROVJERA: Ako su polja prazna
+      if (!this.forma.Komentar.trim() || !this.forma.ObjektID) {
+        Notify.create({
+          color: 'negative',
+          icon: 'report_problem',
+          message: 'Greška: Morate unijeti komentar i odabrati objekt!',
+          position: 'top',
+          timeout: 3000
+        });
+        return; // Prekida metodu, ne ide dalje na API
+      }
+
       await this.api("/recenzije", "POST", { ...this.forma, user_id: this.mainUser.id });
+
+      Notify.create({
+        color: 'positive',
+        icon: 'check_circle',
+        message: 'Recenzija uspješno dodana!',
+        position: 'top'
+      });
+
       this.forma = { Komentar: "", Ocjena: 5, ObjektID: null };
       this.view = "list";
       this.ucitaj();
     },
 
     async spremiIzmjenu() {
+      // PROVJERA: Ako je komentar prazan kod uređivanja
+      if (!this.forma.Komentar.trim()) {
+        Notify.create({
+          color: 'negative',
+          icon: 'warning',
+          message: 'Komentar ne može biti prazan!',
+          position: 'top'
+        });
+        return;
+      }
+
       await this.api(`/recenzije/${this.editId}`, "PUT", { ...this.forma, user_id: this.mainUser.id });
+
+      Notify.create({
+        color: 'info',
+        icon: 'save',
+        message: 'Izmjene su spremljene!',
+        position: 'top'
+      });
+
       this.view = "list";
       this.ucitaj();
     },
 
     async obrisi(id) {
       await this.api(`/recenzije/${id}`, "DELETE", { user_id: this.mainUser.id });
+
+      Notify.create({
+        color: 'warning',
+        textColor: 'black',
+        icon: 'delete',
+        message: 'Recenzija je obrisana.',
+        position: 'top'
+      });
+
       this.ucitaj();
     },
   },
