@@ -1,58 +1,64 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+
+ 
+    <q-header elevated class="header">
       <q-toolbar>
-        <q-toolbar-title>Trenerko</q-toolbar-title>
 
-        <!-- SVI -->
-        <q-btn flat label="Početna" to="/" />
-        <q-btn flat label="Sportski objekti" to="/mapa" />
-        <q-btn flat label="Pretraživanje" to="/pretraga" />
-        <q-btn flat label="Recenzije" to="/recenzije" />
+        <q-toolbar-title class="logo">
+          Trenerko
+        </q-toolbar-title>
 
-        
+       
+        <div class="nav">
+          <q-btn flat label="Početna" to="/" />
+          <q-btn flat label="Objekti" to="/mapa" />
+          <q-btn flat label="Pretraga" to="/pretraga" />
+          <q-btn flat label="Recenzije" to="/recenzije" />
 
-        <!-- VLASNIK + ADMIN -->
-        <q-btn v-if="isOwnerOrAdmin" flat label="Dodaj objekt" to="/unosobjekata" />
+          <q-btn
+            v-if="isOwnerOrAdmin"
+            flat
+            label="Dodaj"
+            to="/unosobjekata"
+          />
 
-        <!-- ADMIN ONLY -->
-        <q-btn
-          v-if="isAdmin"
-          unelevated
-          color="orange"
-          icon="shield"
-          label="Admin"
-          to="/admin"
-          class="q-ml-md"
-        />
+          <q-btn
+            v-if="isAdmin"
+            color="orange"
+            icon="shield"
+            label="Admin"
+            to="/admin"
+          />
+        </div>
 
         <q-space />
 
-        <!-- AUTH -->
-        <template v-if="!currentUser">
-          <q-btn flat label="Login" to="/login" class="bg-orange text-white" />
-          <q-btn flat label="Registracija" to="/registracija" />
-        </template>
+        
+        <div class="auth">
+          <template v-if="!currentUser">
+            <q-btn flat label="Login" to="/login" />
+            <q-btn unelevated color="orange" label="Registracija" to="/registracija" />
+          </template>
 
-        <template v-else>
-          <q-btn
-            flat
-            :label="currentUser.ime + ' ' + currentUser.prezime"
-            to="/profil"
-          />
-          <q-btn flat label="Logout" @click="logout" class="bg-red text-white" />
-        </template>
+          <template v-else>
+            <q-btn flat icon="person" :label="userName" to="/profil" />
+            <q-btn flat icon="logout" color="red" @click="logout" />
+          </template>
+        </div>
+
       </q-toolbar>
     </q-header>
 
     <q-page-container>
       <router-view />
     </q-page-container>
+
   </q-layout>
 </template>
 
 <script>
-import { ref, provide, computed } from 'vue'
+import { ref, computed, provide } from 'vue'
 import { useRouter } from 'vue-router'
 
 export default {
@@ -67,23 +73,55 @@ export default {
       router.push('/')
     }
 
-    const isLoggedIn = computed(() => !!currentUser.value)
+    const role = computed(() => currentUser.value?.role?.trim())
 
-    const isAdmin = computed(() =>
-      currentUser.value?.role?.trim() === 'Admin'
-    )
+    const isAdmin = computed(() => role.value === 'Admin')
 
     const isOwnerOrAdmin = computed(() =>
-      ['Admin', 'Vlasnik objekta'].includes(currentUser.value?.role?.trim())
+      ['Admin', 'Vlasnik objekta'].includes(role.value)
+    )
+
+    const userName = computed(() =>
+      currentUser.value ? `${currentUser.value.ime}` : ''
     )
 
     return {
       currentUser,
       logout,
-      isLoggedIn,
       isAdmin,
-      isOwnerOrAdmin
+      isOwnerOrAdmin,
+      userName
     }
   }
 }
 </script>
+
+<style scoped>
+.header {
+  background: #272729ec;
+}
+
+.logo {
+  font-weight: 700;
+  color: #308deb;
+  letter-spacing: 1px;
+}
+
+
+.nav {
+  display: flex;
+  gap: 4px;
+}
+
+
+.auth {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+
+.q-btn {
+  border-radius: 8px;
+}
+</style>
