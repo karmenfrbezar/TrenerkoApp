@@ -9,7 +9,6 @@ const routes = [
       { path: 'mapa', component: () => import('pages/MapaPage.vue') },
       { path: 'unosobjekata', component: () => import('pages/UnosObjekataPage.vue') },
       { path: 'pretraga', component: () => import('pages/PretragaObjekataPage.vue') },
-      { path: 'rezervacije', component: () => import('pages/RezervacijePage.vue') },
       { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') },
       { path: 'profil', component: () => import('pages/EditPage.vue') },
       { path: 'admin', component: () => import('pages/AdminUsers.vue') }

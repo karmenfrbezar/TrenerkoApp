@@ -3,20 +3,21 @@
     <q-card class="q-pa-lg" style="width:380px; max-width:90%;">
       <div class="text-h5 text-center q-mb-md">Uredi profil</div>
 
-      <!-- Polja za uređivanje -->
-      <q-input filled v-model="username" label="Korisničko ime" class="q-mb-md"/>
-      <q-input filled v-model="email" label="Email" class="q-mb-md"/>
+      <q-input filled v-model="ime" label="Ime" class="q-mb-md" />
+      <q-input filled v-model="prezime" label="Prezime" class="q-mb-md" />
+      <q-input filled v-model="email" label="Email" class="q-mb-md" />
 
-      <q-btn color="primary" label="Spremi promjene" class="full-width q-mt-sm" @click="saveProfile"/>
-      <div v-if="message" class="text-green q-mt-md text-center">{{ message }}</div>
+      <q-btn color="primary" label="Spremi promjene" class="full-width q-mt-sm" @click="saveProfile" />
 
-      <q-separator class="q-my-md"/>
+      <div v-if="message" class="text-green q-mt-md text-center">
+        {{ message }}
+      </div>
 
-      <!-- Polja za read-only prikaz -->
-      <q-input filled v-model="gender" label="Spol" readonly class="q-mb-md"/>
-      <q-input filled v-model="role" label="Uloga" readonly class="q-mb-md"/>
-      <q-input filled v-model="vrijeme_reg" label="Vrijeme registracije" readonly class="q-mb-md"/>
+      <q-separator class="q-my-md" />
 
+      <q-input filled v-model="spol" label="Spol" readonly class="q-mb-md" />
+      <q-input filled v-model="role" label="Uloga" readonly class="q-mb-md" />
+      <q-input filled v-model="status" label="Status računa" readonly class="q-mb-md" />
     </q-card>
   </div>
 </template>
@@ -28,54 +29,67 @@ export default {
   setup() {
     const mainUser = inject('user')
 
-    // Edit polja
-    const username = ref(mainUser.value.username)
-    const email = ref(mainUser.value.email)
+    const ime = ref('')
+    const prezime = ref('')
+    const email = ref('')
     const message = ref('')
 
-    // Read-only polja
-    const gender = ref('')
+    const spol = ref('')
     const role = ref('')
-    const vrijeme_reg = ref('')
-
-
+    const status = ref('')
 
     onMounted(() => {
-      // Inicijaliziramo read-only podatke iz mainUser
-      gender.value = mainUser.value.gender || 'Nije postavljeno',
-      role.value = mainUser.value.role || 'Nije postavljeno',
-      vrijeme_reg.value = mainUser.value.vrijeme_reg || 'Nije postavljeno'
+      ime.value = mainUser.value.ime
+      prezime.value = mainUser.value.prezime
+      email.value = mainUser.value.email
 
-
+      spol.value = mainUser.value.spol || ''
+      role.value = mainUser.value.role || ''
+      status.value = mainUser.value.status || ''
     })
 
     const saveProfile = () => {
-      // Ako polje nije upisano, zadržavamo staru vrijednost
-      const newUsername = username.value.trim() !== '' ? username.value : mainUser.value.username
-      const newEmail = email.value.trim() !== '' ? email.value : mainUser.value.email
+      const newIme = ime.value.trim()
+      const newPrezime = prezime.value.trim()
+      const newEmail = email.value.trim()
 
-      // PUT request za update korisnika
-      fetch(`http://localhost:3000/api/user/${mainUser.value.id}`, {
+      fetch(`http://localhost:3000/api/users/${mainUser.value.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: newUsername, email: newEmail })
+        body: JSON.stringify({
+          ime: newIme,
+          prezime: newPrezime,
+          email: newEmail
+        })
       })
-      .then(res => res.json())
-      .then(() => {
-        mainUser.value.username = newUsername
-        mainUser.value.email = newEmail
-        message.value = "Promjene spremljene"
-      })
-      .catch(() => {
-        message.value = "Greška prilikom spremanja"
-      })
+        .then(res => res.json())
+        .then(() => {
+          mainUser.value.ime = newIme
+          mainUser.value.prezime = newPrezime
+          mainUser.value.email = newEmail
+          message.value = "Promjene spremljene"
+        })
+        .catch(() => {
+          message.value = "Greška prilikom spremanja"
+        })
     }
 
-    return { username, email, message, gender, role, vrijeme_reg, saveProfile }
+    return {
+      ime,
+      prezime,
+      email,
+      message,
+      spol,
+      role,
+      status,
+      saveProfile
+    }
   }
 }
 </script>
 
 <style>
-.full-width { width: 100%; }
+.full-width {
+  width: 100%;
+}
 </style>

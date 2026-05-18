@@ -3,53 +3,77 @@
     <q-card class="q-pa-lg" style="width:380px; max-width:90%;">
       <div class="text-h5 text-center q-mb-md">Registracija</div>
 
-      <q-input filled v-model="username" label="Korisničko ime" class="q-mb-md"/>
+      <q-input filled v-model="ime" label="Ime" class="q-mb-md"/>
+      <q-input filled v-model="prezime" label="Prezime" class="q-mb-md"/>
       <q-input filled v-model="email" label="Email" class="q-mb-md"/>
       <q-input filled v-model="password" label="Lozinka" type="password" class="q-mb-md"/>
       <q-input filled v-model="password2" label="Ponovi lozinku" type="password" class="q-mb-md"/>
 
-      <!-- Polje za spol -->
-      <q-option-group
-        v-model="gender"
-        :options="[
-          { label:'Muško', value:'muško' },
-          { label:'Žensko', value:'žensko' }
-        ]"
-        type="radio"
-        inline
-        label="Spol"
+      <q-input
+        filled
+        v-model="datumRodenja"
+        label="Datum rođenja"
+        type="date"
         class="q-mb-md"
       />
 
-      <q-btn color="primary" label="Registriraj se" class="full-width q-mt-sm" @click="register"/>
-      <div v-if="message" class="text-red q-mt-md text-center">{{ message }}</div>
+      <q-option-group
+        v-model="spol"
+        :options="[
+          { label: 'Muški', value: 'muski' },
+          { label: 'Ženski', value: 'zenski' }
+        ]"
+        type="radio"
+        inline
+        class="q-mb-md"
+      />
+
+      <q-btn
+        color="primary"
+        label="Registriraj se"
+        class="full-width q-mt-sm"
+        @click="register"
+      />
+
+      <div v-if="message" class="text-red q-mt-md text-center">
+        {{ message }}
+      </div>
     </q-card>
   </div>
 </template>
 
 <script>
-import { ref, inject } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 export default {
   setup() {
-    const mainUser = inject('user')
     const router = useRouter()
 
-    const username = ref('')
+    const ime = ref('')
+    const prezime = ref('')
     const email = ref('')
     const password = ref('')
     const password2 = ref('')
-    const gender = ref('')
+    const spol = ref('')
+    const datumRodenja = ref('')
     const message = ref('')
 
     const register = () => {
-      if(!username.value || !email.value || !password.value || !password2.value || !gender.value){
+      if (
+        !ime.value ||
+        !prezime.value ||
+        !email.value ||
+        !password.value ||
+        !password2.value ||
+        !spol.value ||
+        !datumRodenja.value
+      ) {
         message.value = "Sva polja su obavezna"
         return
       }
 
-      if(password.value !== password2.value){
+      if (password.value !== password2.value) {
         message.value = "Lozinke se ne podudaraju"
         return
       }
@@ -58,21 +82,39 @@ export default {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.value,
+          ime: ime.value,
+          prezime: prezime.value,
           email: email.value,
           password: password.value,
-          gender: gender.value
+          spol: spol.value,
+          datumRodenja: datumRodenja.value
         })
       })
-      .then(res => res.json())
-      .then(data => {
-        mainUser.value = { id:data.id, username:username.value, email:email.value, gender:gender.value }
-        router.push('/')
-      })
-      .catch(() => { message.value = "Greška prilikom registracije" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            message.value = data.error
+            return
+          }
+
+          router.push('/login')
+        })
+        .catch(() => {
+          message.value = "Greška na serveru"
+        })
     }
 
-    return { username, email, password, password2, gender, message, register }
+    return {
+      ime,
+      prezime,
+      email,
+      password,
+      password2,
+      spol,
+      datumRodenja,
+      message,
+      register
+    }
   }
 }
 </script>

@@ -11,16 +11,16 @@
         <q-table
           :rows="users"
           :columns="columns"
-          row-key="id"
+          row-key="KorisnikID"
           :loading="loading"
         >
           <template v-slot:body-cell-actions="props">
             <q-btn
-              v-if="props.row.role !== 'admin'"
+              v-if="props.row.Uloga !== 'Admin'"
               color="negative"
               flat
               label="Obriši"
-              @click="deleteUser(props.row.id)"
+              @click="deleteUser(props.row.KorisnikID)"
             />
           </template>
         </q-table>
@@ -39,10 +39,13 @@ export default {
     const loading = ref(false)
 
     const columns = [
-      { name: 'id', label: 'ID', field: 'id', sortable: true },
-      { name: 'username', label: 'Username', field: 'username', sortable: true },
-      { name: 'email', label: 'Email', field: 'email', sortable: true },
-      { name: 'role', label: 'Uloga', field: 'role', sortable: true },
+      { name: 'KorisnikID', label: 'ID', field: 'KorisnikID', sortable: true },
+      { name: 'Ime', label: 'Ime', field: 'Ime', sortable: true },
+      { name: 'Prezime', label: 'Prezime', field: 'Prezime', sortable: true },
+      { name: 'Email', label: 'Email', field: 'Email', sortable: true },
+      { name: 'Spol', label: 'Spol', field: 'Spol', sortable: true },
+      { name: 'Uloga', label: 'Uloga', field: 'Uloga', sortable: true },
+      { name: 'status_racuna', label: 'Status', field: 'status_racuna', sortable: true },
       { name: 'actions', label: 'Akcije', field: 'actions' }
     ]
 
@@ -55,7 +58,7 @@ export default {
 
     const deleteUser = async (id) => {
       await axios.delete(`http://localhost:3000/api/users/${id}`)
-      users.value = users.value.filter(u => u.id !== id)
+      users.value = users.value.filter(u => u.KorisnikID !== id)
     }
 
     onMounted(() => {

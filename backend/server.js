@@ -6,7 +6,7 @@ const mysql = require("mysql");
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -18,406 +18,211 @@ const connection = mysql.createConnection({
 });
 
 connection.connect(err => {
-  if (err) {
-    console.error("MySQL connection error:", err);
-    throw err;
-  }
+  if (err) throw err;
   console.log("Connected to MySQL!");
 });
 
-// =======================
-// REGISTRACIJA
-// =======================
 app.post("/api/register", (req, res) => {
-  const { username, email, password, gender } = req.body;
-  const sql = `
-    INSERT INTO Korisnik (username, email, password, spol, vrijeme_reg)
-    VALUES (?, ?, ?, ?, NOW())
-  `;
-
-  connection.query(sql, [username, email, password, gender], (err, result) => {
-    if (err) {
-      console.error('Register error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
-    res.json({ id: result.insertId, username, email, gender });
-  });
-});
-
-// =======================
-// LOGIN
-// =======================
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  const sql = "SELECT * FROM Korisnik WHERE username=? AND password=?";
-
-  connection.query(sql, [username, password], (err, results) => {
-    if (err) {
-      console.error('Login error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
-    if (results.length === 0) {
-      return res.status(401).json({ error: "Neispravan username ili lozinka" });
-    }
-
-    const user = results[0];
-    res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      gender: user.spol,
-      role: user.uloga,
-      vrijeme_reg: user.vrijeme_reg
-    });
-  });
-});
-
-// =======================
-// EDIT USER
-// =======================
-app.put("/api/user/:id", (req, res) => {
-  const { username, email } = req.body;
-  const { id } = req.params;
-
-  const sql = "UPDATE Korisnik SET username=?, email=? WHERE id=?";
-  connection.query(sql, [username, email, id], (err) => {
-    if (err) {
-      console.error('Update user error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
-    res.json({ success: true });
-  });
-});
-
-// =======================
-// DOHVAT OBJEKATA ZA KARTU
-// =======================
-app.get("/api/objects", (req, res) => {
-  const sql = `
-    SELECT
-      ObjektID AS id,
-      NazivObjekta AS naziv,
-      Opis AS opis,
-      ST_X(Lokacija) AS lat,
-      ST_Y(Lokacija) AS lng
-    FROM ISportskiObjekt
-  `;
-
-  connection.query(sql, (err, results) => {
-    if (err) {
-      console.error('/api/objects error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
-    res.json(results);
-  });
-});
-
-
-
-// =======================
-// RECENZIJE DOHVAT
-// ======================= 
-app.get("/api/recenzije", (req, res) => {
-  const sql = `
-    SELECT 
-      r.id AS RecenzijaID,
-      r.gym_id AS ObjektID,
-      o.NazivObjekta,
-      r.rating AS Ocjena,
-      r.comment AS Komentar,
-      r.created_at,
-      r.user_id,
-      k.username
-    FROM Recenzije r
-    JOIN ISportskiObjekt o ON o.ObjektID = r.gym_id
-    JOIN Korisnik k ON k.id = r.user_id
-    ORDER BY r.created_at DESC
-  `;
-
-  connection.query(sql, (err, results) => {
-    if (err) {
-      console.error('/api/recenzije error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
-    res.json(results);
-  });
-});
-
-// RECENZIJE - DODAVANJE
-// RECENZIJE - DODAVANJE
-app.post("/api/recenzije", (req, res) => {
-  const { Komentar, Ocjena, ObjektID, user_id } = req.body;
-
-  // Osnovna provjera postojanja
-  if (!Komentar || Ocjena == null || !ObjektID || !user_id) {
-    return res.status(400).json({ error: "Sva polja su obavezna!" });
-  }
-
-  // VALIDACIJA OCJENE (1-5) - Ovo donosi bodove za složenost
-  const ocjenaNum = parseInt(Ocjena);
-  if (isNaN(ocjenaNum) || ocjenaNum < 1 || ocjenaNum > 5) {
-    return res.status(400).json({ error: "Ocjena mora biti između 1 i 5!" });
-  }
-
-  // VALIDACIJA TEKSTA - Da ne bude prazno ili samo razmaci
-  if (Komentar.trim().length < 2) {
-    return res.status(400).json({ error: "Komentar mora sadržavati barem 2 znaka!" });
-  }
+  const { ime, prezime, email, password, spol, datumRodenja } = req.body;
 
   const sql = `
-    INSERT INTO Recenzije (comment, rating, gym_id, user_id, created_at)
-    VALUES (?, ?, ?, ?, NOW())
-  `;
-
-  connection.query(sql, [Komentar.trim(), ocjenaNum, ObjektID, user_id], (err, result) => {
-    if (err) {
-      console.error('DB error inserting recenziju:', err);
-      return res.status(500).json({ error: 'Greška pri unosu u bazu' });
-    }
-    res.json({ success: true, insertedId: result.insertId });
-  });
-});
-
-// RECENZIJE - BRISANJE
-app.delete("/api/recenzije/:id", (req, res) => {
-  const { id } = req.params;
-  const { user_id } = req.body; // korisnički ID mora doći iz frontenda
-
-  if (!user_id) {
-    return res.status(400).json({ error: "Nedostaje user_id za provjeru prava brisanja" });
-  }
-
-  // Provjera je li recenzija pripada korisniku
-  const provjeraSql = "SELECT user_id FROM Recenzije WHERE id = ?";
-  connection.query(provjeraSql, [id], (err, results) => {
-    if (err) {
-      console.error('Error provjere vlasništva recenzije:', err);
-      return res.status(500).json({ error: 'DB error' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'Recenzija ne postoji' });
-    }
-
-    if (results[0].user_id !== user_id) {
-      return res.status(403).json({ error: 'Nemate pravo brisati ovu recenziju' });
-    }
-
-    // Ako je vlasnik može obrisati
-    const deleteSql = "DELETE FROM Recenzije WHERE id = ?";
-    connection.query(deleteSql, [id], (err) => {
-      if (err) {
-        console.error('Delete recenzije error:', err);
-        return res.status(500).json({ error: err.message || 'DB error' });
-      }
-      res.json({ success: true });
-    });
-  });
-});
-
-// RECENZIJE - UREĐIVANJE
-app.put("/api/recenzije/:id", (req, res) => {
-  const { id } = req.params;
-  const { Komentar, Ocjena, user_id } = req.body;
-
-  if (!Komentar || Ocjena == null || !user_id) {
-    return res.status(400).json({ error: "Sva polja su obavezna!" });
-  }
-
-  // --- OVO JE NOVO (VALIDACIJA) ---
-  const ocjenaNum = parseInt(Ocjena);
-  if (isNaN(ocjenaNum) || ocjenaNum < 1 || ocjenaNum > 5) {
-    return res.status(400).json({ error: "Ocjena mora biti između 1 i 5!" });
-  }
-  if (Komentar.trim().length < 2) {
-    return res.status(400).json({ error: "Komentar ne može biti prazan!" });
-  }
-  // -------------------------------
-
-  const provjeraSql = "SELECT user_id FROM Recenzije WHERE id = ?";
-  connection.query(provjeraSql, [id], (err, results) => {
-    if (err) {
-      console.error('Error provjere vlasništva recenzije:', err);
-      return res.status(500).json({ error: 'DB error' });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'Recenzija ne postoji' });
-    }
-    if (results[0].user_id !== user_id) {
-      return res.status(403).json({ error: 'Nemate pravo uređivati ovu recenziju' });
-    }
-
-    const updateSql = "UPDATE Recenzije SET comment = ?, rating = ? WHERE id = ?";
-    // Ovdje šaljemo pročišćene podatke (Komentar.trim() i ocjenaNum)
-    connection.query(updateSql, [Komentar.trim(), ocjenaNum, id], (err) => {
-      if (err) {
-        console.error('Update recenzije error:', err);
-        return res.status(500).json({ error: 'Greška pri ažuriranju' });
-      }
-      res.json({ success: true });
-    });
-  });
-});
-
-// =======================
-// PRETRAGA TERETANA
-// =======================
-app.get("/api/teretane", (req, res) => {
-  const { name, address } = req.query;
-
-  let sql = `
-    SELECT id, name, address, description
-    FROM Teretane
-    WHERE 1 = 1
-  `;
-  const params = [];
-
-  if (name) {
-    sql += " AND name LIKE ?";
-    params.push(`%${name}%`);
-  }
-
-  if (address) {
-    sql += " AND address LIKE ?";
-    params.push(`%${address}%`);
-  }
-
-  connection.query(sql, params, (err, results) => {
-    if (err) {
-      console.error("SQL greška (teretane):", err);
-      return res.status(500).json({ error: "Greška baze" });
-    }
-    res.json(results);
-  });
-});
-
-// ==================================================
-// PREGLED REZERVACIJA
-// ==================================================
-app.get("/api/rezervacije", (req, res) => {
-  const { gym } = req.query;
-
-  let sql = `
-    SELECT 
-      r.id,
-      k.username,
-      t.name AS gym_name,
-      DATE_FORMAT(r.reservation_date, '%d.%m.%Y %H:%i') AS reservation_date
-    FROM Rezervacije r
-    JOIN Korisnik k ON r.user_id = k.id
-    JOIN Teretane t ON r.gym_id = t.id
-    WHERE 1 = 1
-  `;
-
-  const params = [];
-
-  if (gym) {
-    sql += " AND t.name LIKE ?";
-    params.push(`%${gym}%`);
-  }
-
-  connection.query(sql, params, (err, results) => {
-    if (err) {
-      console.error("Greška baze:", err);
-      return res.status(500).json({ error: "DB error" });
-    }
-
-    res.json(results);
-  });
-});
-
-
-
-// ==================================================
-// SPORTSKI OBJEKTI - UNOS 
-// ==================================================
-app.post("/api/unosobjekata", (req, res) => {
-  const {
-    naziv,
-    adresa,
-    opis,
-    kontakt,
-    lat,
-    lng,
-    vlasnikId
-  } = req.body;
-
-  if (!naziv || !adresa || !kontakt || lat == null || lng == null) {
-    return res.status(400).json({
-      error: "Nedostaju obavezna polja"
-    });
-  }
-
-  const sql = `
-    INSERT INTO ISportskiObjekt
-    (NazivObjekta, Adresa, Opis, Kontakt, Lokacija, VlasnikID)
-    VALUES (?, ?, ?, ?, POINT(?, ?), ?)
+    INSERT INTO PI_Korisnik
+    (Ime, Prezime, Email, Lozinka, Spol, Uloga, status_racuna, DatumRodenja)
+    VALUES (?, ?, ?, ?, ?, 'Korisnik', 'Aktivan', ?)
   `;
 
   connection.query(
     sql,
-    [naziv, adresa, opis, kontakt, lat, lng, vlasnikId || null],
+    [ime, prezime, email, password, spol, datumRodenja],
     (err, result) => {
       if (err) {
-        console.error("Greška kod unosa objekta:", err);
-        return res.status(500).json({ error: "DB error" });
+        console.error("REGISTER ERROR:", err);
+        return res.status(500).json({ error: err.message });
       }
 
-      res.json({ success: true, insertedId: result.insertId });
+      res.json({ success: true, id: result.insertId });
     }
   );
 });
-// =======================
-// DOHVAT KORISNIKA (ADMIN)
-// =======================
+
+app.post("/api/login", (req, res) => {
+  const { email, lozinka } = req.body;
+
+  const sql = `
+    SELECT * FROM PI_Korisnik 
+    WHERE Email=? AND Lozinka=?
+  `;
+
+  connection.query(sql, [email, lozinka], (err, results) => {
+    if (err) return res.status(500).json(err);
+    if (results.length === 0) return res.status(401).json({ error: "Neispravni podaci" });
+
+    const user = results[0];
+
+    res.json({
+      id: user.KorisnikID,
+      email: user.Email,
+      ime: user.Ime,
+      prezime: user.Prezime,
+      spol: user.Spol,
+      role: user.Uloga,
+      status: user.status_racuna
+    });
+  });
+});
+
 app.get("/api/users", (req, res) => {
   const sql = `
-    SELECT id, username, email, spol AS gender, uloga AS role, vrijeme_reg
-    FROM Korisnik
-    ORDER BY id DESC
+    SELECT KorisnikID, Ime, Prezime, Email, Spol, Uloga, status_racuna, DatumRodenja
+    FROM PI_Korisnik
+    ORDER BY KorisnikID DESC
   `;
 
   connection.query(sql, (err, results) => {
-    if (err) {
-      console.error('/api/users error:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
+    if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
 
+app.put("/api/users/:id", (req, res) => {
+  const { ime, prezime, email } = req.body;
+  const { id } = req.params;
+
+  const sql = `
+    UPDATE PI_Korisnik 
+    SET Ime=?, Prezime=?, Email=? 
+    WHERE KorisnikID=?
+  `;
+
+  connection.query(sql, [ime, prezime, email, id], err => {
+    if (err) return res.status(500).json(err);
+    res.json({ success: true });
+  });
+});
 
 app.delete("/api/users/:id", (req, res) => {
   const { id } = req.params;
 
-  // 1) prvo dohvatimo korisnika
-  const checkSql = "SELECT uloga FROM Korisnik WHERE id = ?";
+  const checkSql = "SELECT Uloga FROM PI_Korisnik WHERE KorisnikID=?";
   connection.query(checkSql, [id], (err, results) => {
-    if (err) {
-      console.error('Error checking user role:', err);
-      return res.status(500).json({ error: err.message || 'DB error' });
-    }
+    if (err) return res.status(500).json(err);
+    if (results.length === 0) return res.status(404).json({ error: "Not found" });
+    if (results[0].Uloga === "Admin") return res.status(403).json({ error: "Ne može admin" });
 
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'Korisnik ne postoji' });
-    }
+    const delSql = "DELETE FROM PI_Korisnik WHERE KorisnikID=?";
+    connection.query(delSql, [id], err => {
+      if (err) return res.status(500).json(err);
+      res.json({ success: true });
+    });
+  });
+});
 
-    // 2) ako je admin, ne dozvoljavamo brisanje
-    if (results[0].uloga === 'admin') {
-      return res.status(403).json({ error: 'Ne možete obrisati admin korisnika' });
-    }
+app.get("/api/objects", (req, res) => {
+  const sql = `
+    SELECT ObjektID AS id, NazivObjekta, Adresa, Opis, Lat, Lng
+    FROM PI_SportskiObjekt
+  `;
 
-    // 3) ako nije admin, brišemo
-    const deleteSql = "DELETE FROM Korisnik WHERE id = ?";
-    connection.query(deleteSql, [id], (err) => {
-      if (err) {
-        console.error('Delete user error:', err);
-        return res.status(500).json({ error: err.message || 'DB error' });
-      }
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+app.post("/api/objects", (req, res) => {
+  const { naziv, adresa, opis, kontakt, lat, lng, vlasnikId } = req.body;
+
+  const sql = `
+    INSERT INTO PI_SportskiObjekt
+    (NazivObjekta, Adresa, Opis, Kontakt, Lat, Lng, VlasnikID)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  connection.query(sql, [naziv, adresa, opis, kontakt, lat, lng, vlasnikId], (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json({ id: result.insertId });
+  });
+});
+
+app.get("/api/recenzije", (req, res) => {
+  const sql = `
+    SELECT 
+      r.RecenzijaID,
+      r.ObjektID,
+      o.NazivObjekta,
+      r.Ocjena,
+      r.Komentar,
+      r.DatumObjave,
+      k.Ime,
+      k.Prezime
+    FROM PI_Recenzija r
+    JOIN PI_SportskiObjekt o ON o.ObjektID = r.ObjektID
+    JOIN PI_Korisnik k ON k.KorisnikID = r.KorisnikID
+    ORDER BY r.DatumObjave DESC
+  `;
+
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+app.post("/api/recenzije", (req, res) => {
+  const { Komentar, Ocjena, ObjektID, KorisnikID } = req.body;
+
+  const sql = `
+    INSERT INTO PI_Recenzija
+    (KorisnikID, ObjektID, Ocjena, Komentar, DatumObjave)
+    VALUES (?, ?, ?, ?, NOW())
+  `;
+
+  connection.query(sql, [KorisnikID, ObjektID, Ocjena, Komentar], (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json({ id: result.insertId });
+  });
+});
+
+app.delete("/api/recenzije/:id", (req, res) => {
+  const { id } = req.params;
+  const { KorisnikID } = req.body;
+
+  const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
+  connection.query(checkSql, [id], (err, results) => {
+    if (err) return res.status(500).json(err);
+    if (results.length === 0) return res.status(404).json({ error: "Not found" });
+    if (results[0].KorisnikID !== KorisnikID) return res.status(403).json({ error: "No permission" });
+
+    const delSql = "DELETE FROM PI_Recenzija WHERE RecenzijaID=?";
+    connection.query(delSql, [id], err => {
+      if (err) return res.status(500).json(err);
+      res.json({ success: true });
+    });
+  });
+});
+
+app.put("/api/recenzije/:id", (req, res) => {
+  const { id } = req.params;
+  const { Komentar, Ocjena, KorisnikID } = req.body;
+
+  const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
+  connection.query(checkSql, [id], (err, results) => {
+    if (err) return res.status(500).json(err);
+    if (results.length === 0) return res.status(404).json({ error: "Not found" });
+    if (results[0].KorisnikID !== KorisnikID) return res.status(403).json({ error: "No permission" });
+
+    const sql = `
+      UPDATE PI_Recenzija 
+      SET Komentar=?, Ocjena=? 
+      WHERE RecenzijaID=?
+    `;
+
+    connection.query(sql, [Komentar, Ocjena, id], err => {
+      if (err) return res.status(500).json(err);
       res.json({ success: true });
     });
   });
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log("Server running on port " + port);
 });
