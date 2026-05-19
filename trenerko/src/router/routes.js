@@ -10,6 +10,7 @@ const routes = [
       { path: 'unosobjekata', component: () => import('pages/UnosObjekataPage.vue') },
       { path: 'pretraga', component: () => import('pages/PretragaObjekataPage.vue') },
       { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') },
+      { path: 'statistika/:id', component: () => import('pages/StatistikaObjekta.vue') },
       { path: 'profil', component: () => import('pages/EditPage.vue') },
       { path: 'admin', component: () => import('pages/AdminUsers.vue') }
 

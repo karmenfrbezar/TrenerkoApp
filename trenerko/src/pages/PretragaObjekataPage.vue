@@ -1,123 +1,160 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h5 q-mb-md">Pretraživanje teretana</div>
 
-    <div class="row q-col-gutter-md q-mb-md">
-      <div class="col-12 col-md-4">
-        <q-input
-          v-model="filters.name"
-          label="Naziv teretane"
-          outlined
-          clearable
-        />
+    <div class="text-h5 text-primary q-mb-md text-center">
+      Sportski objekti
+    </div>
+
+    <q-input
+      v-model="search"
+      filled
+      dense
+      clearable
+      placeholder="Pretraži po nazivu ili adresi..."
+      class="q-mb-md"
+    >
+      <template v-slot:prepend>
+        <q-icon name="search" />
+      </template>
+    </q-input>
+
+    <div v-if="loading" class="text-center q-pa-lg">
+      <q-spinner color="primary" size="2em" />
+    </div>
+
+    <div v-else class="row q-col-gutter-md">
+      <div
+        v-for="obj in filteredObjects"
+        :key="obj.id"
+        class="col-12 col-md-6"
+      >
+        <q-card flat bordered>
+          <q-card-section>
+            <div class="row items-start justify-between">
+              <div class="text-h6">{{ obj.NazivObjekta }}</div>
+              <q-btn
+                round
+                flat
+                dense
+                :icon="isFavorite(obj.id) ? 'star' : 'star_border'"
+                :color="isFavorite(obj.id) ? 'orange' : 'grey'"
+                @click="toggleFavorite(obj.id)"
+              />
+            </div>
+
+            <div class="text-grey-7 q-mt-xs">{{ obj.Adresa }}</div>
+
+            <div v-if="obj.Opis" class="q-mt-sm text-body2">
+              {{ obj.Opis }}
+            </div>
+
+            <div class="q-mt-sm row items-center">
+              <q-rating
+                :model-value="getAvgRating(obj.id)"
+                max="5"
+                size="1.2em"
+                color="orange"
+                readonly
+              />
+              <span class="q-ml-sm text-caption">
+                {{ getAvgRating(obj.id).toFixed(1) }} / 5
+                ({{ getReviewCount(obj.id) }})
+              </span>
+            </div>
+
+            <div class="q-mt-sm">
+              <q-btn
+                flat
+                dense
+                color="primary"
+                icon="bar_chart"
+                label="Statistika"
+                :to="`/statistika/${obj.id}`"
+              />
+            </div>
+          </q-card-section>
+        </q-card>
       </div>
 
-      <div class="col-12 col-md-4">
-        <q-input
-          v-model="filters.address"
-          label="Adresa"
-          outlined
-          clearable
-        />
-      </div>
-
-      <div class="col-12 col-md-4 flex flex-center">
-        <q-btn
-          label="Pretraži"
-          color="primary"
-          @click="fetchGyms"
-          class="q-mr-sm"
-        />
-        <q-btn label="Reset" flat @click="resetFilters" />
+      <div
+        v-if="filteredObjects.length === 0"
+        class="col-12 text-center text-grey q-pa-lg"
+      >
+        Nema rezultata.
       </div>
     </div>
 
-    <q-separator class="q-mb-md" />
-
-    <div v-if="loading" class="flex flex-center q-my-lg">
-      <q-spinner size="40px" />
-    </div>
-
-    <div v-else>
-      <div v-if="gyms.length === 0" class="text-grey">
-        Nema rezultata za zadane kriterije.
-      </div>
-
-      <div class="row q-col-gutter-md">
-        <div
-          v-for="gym in gyms"
-          :key="gym.id"
-          class="col-12 col-md-4"
-        >
-          <q-card>
-            <q-card-section>
-              <div class="text-h6">{{ gym.name }}</div>
-              <div class="text-subtitle2 text-grey">
-                {{ gym.address }}
-              </div>
-            </q-card-section>
-
-            <q-card-section class="q-pt-none">
-              <div>
-                <strong>Adresa:</strong> {{ gym.address }}
-              </div>
-              <div v-if="gym.description">
-                <strong>Opis:</strong> {{ gym.description }}
-              </div>
-            </q-card-section>
-
-            <q-card-actions align="right">
-              <q-btn flat label="Detalji" color="primary" />
-            </q-card-actions>
-          </q-card>
-        </div>
-      </div>
-    </div>
   </q-page>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script>
+import { ref, computed, onMounted } from 'vue'
 
-const gyms = ref([])
-const loading = ref(false)
+const API = 'http://localhost:3000'
 
-const filters = ref({
-  name: '',
-  address: ''
-})
+export default {
+  setup() {
+    const objects = ref([])
+    const reviews = ref([])
+    const search = ref('')
+    const favorites = ref([])
+    const loading = ref(true)
 
-const API_URL = 'http://localhost:3000/api/teretane'
-
-const fetchGyms = async () => {
-  loading.value = true
-  try {
-    const params = new URLSearchParams()
-
-    if (filters.value.name) {
-      params.append('name', filters.value.name)
+    const loadData = async () => {
+      try {
+        const [oRes, rRes] = await Promise.all([
+          fetch(`${API}/api/objects`),
+          fetch(`${API}/api/recenzije`)
+        ])
+        objects.value = await oRes.json()
+        reviews.value = await rRes.json()
+      } catch (e) {
+        console.error('Greška kod učitavanja:', e)
+      } finally {
+        loading.value = false
+      }
     }
 
-    if (filters.value.address) {
-      params.append('address', filters.value.address)
+    onMounted(loadData)
+
+    const getReviewsFor = (id) =>
+      reviews.value.filter(r => r.ObjektID === id)
+
+    const getAvgRating = (id) => {
+      const rs = getReviewsFor(id)
+      if (rs.length === 0) return 0
+      return rs.reduce((s, r) => s + Number(r.Ocjena), 0) / rs.length
     }
 
-    const response = await fetch(`${API_URL}?${params.toString()}`)
-    gyms.value = await response.json()
-  } catch (error) {
-    console.error('Greška pri dohvaćanju teretana:', error)
-  } finally {
-    loading.value = false
+    const getReviewCount = (id) => getReviewsFor(id).length
+
+    const filteredObjects = computed(() => {
+      const q = (search.value || '').toLowerCase().trim()
+      if (!q) return objects.value
+      return objects.value.filter(o =>
+        (o.NazivObjekta || '').toLowerCase().includes(q) ||
+        (o.Adresa || '').toLowerCase().includes(q) ||
+        (o.Opis || '').toLowerCase().includes(q)
+      )
+    })
+
+    const isFavorite = (id) => favorites.value.includes(id)
+
+    const toggleFavorite = (id) => {
+      const i = favorites.value.indexOf(id)
+      if (i >= 0) favorites.value.splice(i, 1)
+      else favorites.value.push(id)
+    }
+
+    return {
+      search,
+      loading,
+      filteredObjects,
+      getAvgRating,
+      getReviewCount,
+      isFavorite,
+      toggleFavorite
+    }
   }
 }
-
-const resetFilters = () => {
-  filters.value.name = ''
-  filters.value.address = ''
-  fetchGyms()
-}
-
-onMounted(() => {
-  fetchGyms()
-})
 </script>
