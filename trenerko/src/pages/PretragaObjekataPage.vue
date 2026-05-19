@@ -33,6 +33,7 @@
             <div class="row items-start justify-between">
               <div class="text-h6">{{ obj.NazivObjekta }}</div>
               <q-btn
+                v-if="mainUser"
                 round
                 flat
                 dense
@@ -88,17 +89,32 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 
 const API = 'http://localhost:3000'
 
 export default {
+  name: 'PretragaObjekataPage',
   setup() {
+    const mainUser = inject('user')
     const objects = ref([])
     const reviews = ref([])
-    const search = ref('')
     const favorites = ref([])
+    const search = ref('')
     const loading = ref(true)
+
+    const loadFavorites = async () => {
+      if (!mainUser.value) {
+        favorites.value = []
+        return
+      }
+      try {
+        const res = await fetch(`${API}/api/favoriti/${mainUser.value.id}`)
+        favorites.value = await res.json()
+      } catch (e) {
+        console.error('Greška kod favorita:', e)
+      }
+    }
 
     const loadData = async () => {
       try {
@@ -115,7 +131,10 @@ export default {
       }
     }
 
-    onMounted(loadData)
+    onMounted(async () => {
+      await loadData()
+      await loadFavorites()
+    })
 
     const getReviewsFor = (id) =>
       reviews.value.filter(r => r.ObjektID === id)
@@ -138,15 +157,38 @@ export default {
       )
     })
 
-    const isFavorite = (id) => favorites.value.includes(id)
+    const isFavorite = (id) => favorites.value.some(f => f.ObjektID === id)
 
-    const toggleFavorite = (id) => {
-      const i = favorites.value.indexOf(id)
-      if (i >= 0) favorites.value.splice(i, 1)
-      else favorites.value.push(id)
+    const toggleFavorite = async (id) => {
+      if (!mainUser.value) return
+
+      const body = {
+        KorisnikID: mainUser.value.id,
+        ObjektID: id
+      }
+
+      try {
+        if (isFavorite(id)) {
+          await fetch(`${API}/api/favoriti`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+        } else {
+          await fetch(`${API}/api/favoriti`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+        }
+        await loadFavorites()
+      } catch (e) {
+        console.error('Greška kod favorita:', e)
+      }
     }
 
     return {
+      mainUser,
       search,
       loading,
       filteredObjects,

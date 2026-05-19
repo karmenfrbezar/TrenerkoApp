@@ -9,6 +9,15 @@
 
       <q-btn color="primary" label="Spremi promjene" class="full-width q-mt-sm" @click="saveProfile" />
 
+      <q-btn
+        outline
+        color="orange"
+        icon="star"
+        label="Moji favoriti"
+        class="full-width q-mt-sm"
+        to="/favoriti"
+      />
+
       <div v-if="message" class="text-green q-mt-md text-center">
         {{ message }}
       </div>

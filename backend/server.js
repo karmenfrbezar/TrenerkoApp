@@ -39,7 +39,6 @@ app.post("/api/register", (req, res) => {
         console.error("REGISTER ERROR:", err);
         return res.status(500).json({ error: err.message });
       }
-
       res.json({ success: true, id: result.insertId });
     }
   );
@@ -220,6 +219,67 @@ app.put("/api/recenzije/:id", (req, res) => {
       if (err) return res.status(500).json(err);
       res.json({ success: true });
     });
+  });
+});
+
+app.get("/api/favoriti/:korisnikId", (req, res) => {
+  const { korisnikId } = req.params;
+
+  const sql = `
+    SELECT 
+      f.FavoritID,
+      f.ObjektID,
+      f.DatumDodavanja,
+      o.NazivObjekta,
+      o.Adresa,
+      o.Opis
+    FROM PI_Favoriti f
+    JOIN PI_SportskiObjekt o ON o.ObjektID = f.ObjektID
+    WHERE f.KorisnikID = ?
+    ORDER BY f.DatumDodavanja DESC
+  `;
+
+  connection.query(sql, [korisnikId], (err, results) => {
+    if (err) {
+      console.error("FAVORITI ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+app.post("/api/favoriti", (req, res) => {
+  const { KorisnikID, ObjektID } = req.body;
+
+  if (!KorisnikID || !ObjektID) {
+    return res.status(400).json({ error: "KorisnikID i ObjektID su obavezni" });
+  }
+
+  const sql = `INSERT INTO PI_Favoriti (KorisnikID, ObjektID, DatumDodavanja) VALUES (?, ?, NOW())`;
+
+  connection.query(sql, [KorisnikID, ObjektID], (err, result) => {
+    if (err) {
+      console.error("POST FAVORITI ERROR:", err);
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: "Već u favoritima" });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ id: result.insertId });
+  });
+});
+
+app.delete("/api/favoriti", (req, res) => {
+  const { KorisnikID, ObjektID } = req.body;
+
+  const sql = `DELETE FROM PI_Favoriti WHERE KorisnikID = ? AND ObjektID = ?`;
+
+  connection.query(sql, [KorisnikID, ObjektID], (err) => {
+    if (err) {
+      console.error("DELETE FAVORITI ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true });
   });
 });
 
