@@ -118,10 +118,9 @@ app.delete("/api/users/:id", (req, res) => {
 
 app.get("/api/objects", (req, res) => {
   const sql = `
-    SELECT ObjektID AS id, NazivObjekta, Adresa, Opis, Lat, Lng
+    SELECT ObjektID AS id, NazivObjekta, Adresa, Opis, Lat, Lng, VlasnikID
     FROM PI_SportskiObjekt
   `;
-
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
@@ -140,6 +139,63 @@ app.post("/api/objects", (req, res) => {
   connection.query(sql, [naziv, adresa, opis, kontakt, lat, lng, vlasnikId], (err, result) => {
     if (err) return res.status(500).json(err);
     res.json({ id: result.insertId });
+  });
+});
+
+app.delete("/api/objects/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM PI_SportskiObjekt WHERE ObjektID = ?";
+  connection.query(sql, [id], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.get("/api/dogadjaji", (req, res) => {
+  const sql = `
+    SELECT 
+      d.DogadajID,
+      d.ObjektID,
+      d.NazivDogadaja,
+      d.OpisDogadaja,
+      d.DatumDogadaja,
+      d.Status,
+      o.NazivObjekta,
+      o.VlasnikID
+    FROM PI_Dogadaj d
+    JOIN PI_SportskiObjekt o ON o.ObjektID = d.ObjektID
+    ORDER BY d.DatumDogadaja DESC
+  `;
+  connection.query(sql, (err, results) => {
+    if (err) {
+      console.error("DOGADAJI ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+app.post("/api/dogadjaji", (req, res) => {
+  const { ObjektID, NazivDogadaja, OpisDogadaja, DatumDogadaja } = req.body;
+  const sql = `
+    INSERT INTO PI_Dogadaj (ObjektID, NazivDogadaja, OpisDogadaja, DatumDogadaja, Status)
+    VALUES (?, ?, ?, ?, 'Aktivan')
+  `;
+  connection.query(sql, [ObjektID, NazivDogadaja, OpisDogadaja, DatumDogadaja], (err, result) => {
+    if (err) {
+      console.error("POST DOGADAJ ERROR:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ id: result.insertId });
+  });
+});
+
+app.delete("/api/dogadjaji/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM PI_Dogadaj WHERE DogadajID = ?";
+  connection.query(sql, [id], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 

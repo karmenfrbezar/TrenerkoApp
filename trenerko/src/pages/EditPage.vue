@@ -18,6 +18,16 @@
         to="/favoriti"
       />
 
+      <q-btn
+        v-if="isOwner"
+        unelevated
+        color="purple"
+        icon="dashboard"
+        label="Vlasnik dashboard"
+        class="full-width q-mt-sm"
+        to="/dashboard"
+      />
+
       <div v-if="message" class="text-green q-mt-md text-center">
         {{ message }}
       </div>
@@ -32,9 +42,10 @@
 </template>
 
 <script>
-import { ref, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 
 export default {
+  name: 'EditPage',
   setup() {
     const mainUser = inject('user')
 
@@ -46,6 +57,8 @@ export default {
     const spol = ref('')
     const role = ref('')
     const status = ref('')
+
+    const isOwner = computed(() => role.value?.trim() === 'Vlasnik objekta')
 
     onMounted(() => {
       ime.value = mainUser.value.ime
@@ -91,6 +104,7 @@ export default {
       spol,
       role,
       status,
+      isOwner,
       saveProfile
     }
   }

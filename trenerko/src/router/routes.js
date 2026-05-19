@@ -12,6 +12,7 @@ const routes = [
       { path: 'recenzije', component: () => import('pages/RecenzijePage.vue') },
       { path: 'statistika/:id', component: () => import('pages/StatistikaObjekta.vue') },
       { path: 'favoriti', component: () => import('pages/FavoritiPage.vue') },
+      { path: 'dashboard', component: () => import('pages/VlasnikDashboard.vue') },
       { path: 'profil', component: () => import('pages/EditPage.vue') },
       { path: 'admin', component: () => import('pages/AdminUsers.vue') }
 
