@@ -15,10 +15,27 @@
       >
         <q-card class="bg-white text-dark">
           <q-card-section>
-            <div class="text-h6">{{ obj.naziv }}</div>
-            <div class="text-subtitle2 q-mt-xs">
+
+            <div class="text-h6">
+              {{ obj.naziv }}
+            </div>
+
+            <div>
+              {{ obj.adresa }}
+            </div>
+
+            <div class="q-mt-sm">
               {{ obj.opis }}
             </div>
+
+            <div class="q-mt-sm">
+
+              ⭐ {{ obj.prosjekOcjena || 0 }}
+
+              ({{ obj.brojRecenzija }} recenzija)
+
+            </div>
+
           </q-card-section>
 
           <q-card-actions>
@@ -72,7 +89,7 @@ const markers = []
 //dohvacanje podataka iz backenda
 async function loadObjects() {
   try {
-    const res = await fetch("http://localhost:3000/api/objects")
+    const res = await fetch("http://localhost:3000/api/objects-map")
     const data = await res.json()
     objects.value = data
   } catch (err) {

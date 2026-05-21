@@ -116,11 +116,44 @@ app.delete("/api/users/:id", (req, res) => {
   });
 });
 
+
+// dohvacanje podataka o sportskih objektima
+app.get("/api/objects-map", (req, res) => {
+
+  const sql = `
+  SELECT
+      o.ObjektID AS id,
+      o.NazivObjekta AS naziv,
+      o.Adresa AS adresa,
+      o.Opis AS opis,
+      o.Kontakt AS kontakt,
+      o.Lat AS lat,
+      o.Lng AS lng,
+
+      ROUND(AVG(r.Ocjena),1) AS prosjekOcjena,
+      COUNT(r.RecenzijaID) AS brojRecenzija
+
+  FROM PI_SportskiObjekt o
+
+  LEFT JOIN PI_Recenzija r
+  ON r.ObjektID = o.ObjektID
+
+  GROUP BY o.ObjektID
+  `
+
+  connection.query(sql,(err,result)=>{
+      if(err) return res.status(500).json(err)
+
+      res.json(result)
+  })
+}) 
+
 app.get("/api/objects", (req, res) => {
   const sql = `
     SELECT ObjektID AS id, NazivObjekta, Adresa, Opis, Lat, Lng, VlasnikID
     FROM PI_SportskiObjekt
   `;
+
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
