@@ -30,6 +30,7 @@
     <div class="row justify-center">
       <div style="width: 100%; max-width: 600px;">
 
+        <!-- POPIS RECENZIJA -->
         <div v-if="view === 'list'">
           <q-input
             v-model="filterText"
@@ -52,24 +53,27 @@
             <b>{{ r.NazivObjekta }}</b>
             : {{ r.Ocjena }} ⭐ <br />
             <div class="q-mb-sm">{{ r.Komentar }}</div>
-            <small> - {{ r.username }}</small>
+            <div class="row justify-between items-center q-mt-xs">
+              <small class="text-grey-7"> - {{ r.username }}</small>
+              <small class="text-grey-5">{{ formatDatum(r.DatumObjave) }}</small>
+            </div>
 
             <div class="row justify-end q-mt-md">
               <q-btn
-                  v-if="mainUser && r.user_id === mainUser.id"
-                  label="UREDI"
-                  color="primary"
-                  rounded
-                  unelevated
-                  class="q-px-md q-mb-sm shadow-2"
-                  style="font-size: 13px;"
-                  @click="editRecenzija(r)"
-                />
-
+                v-if="mainUser && r.KorisnikID === mainUser.id"
+                label="UREDI"
+                color="primary"
+                rounded
+                unelevated
+                class="q-px-md q-mb-sm shadow-2"
+                style="font-size: 13px;"
+                @click="editRecenzija(r)"
+              />
             </div>
           </q-card>
         </div>
 
+        <!-- FORMA ZA DODAJ / UREDI -->
         <q-card v-if="view === 'add' || view === 'edit'" class="q-pa-md" style="border-radius: 15px;">
           <q-select
             v-if="view === 'add'"
@@ -79,29 +83,28 @@
             option-value="ObjektID"
             emit-value map-options
             label="Sportski objekt"
-
           />
           <q-input
-  v-model="forma.Komentar"
-  label="Komentar"
-  type="textarea"
-  class="q-mt-md"
-  outlined
-/>
+            v-model="forma.Komentar"
+            label="Komentar"
+            type="textarea"
+            class="q-mt-md"
+            outlined
+          />
 
-<div class="q-mt-lg q-mb-lg text-center">
-  <div class="text-grey-7 q-mb-xs" style="font-size: 1.1em;">Ocjena:</div>
-  <q-rating
-    v-model="forma.Ocjena"
-    size="2.3em"
-    :max="5"
-    color="primary"
-    icon="star_border"
-    icon-selected="star"
-  />
-</div>
+          <div class="q-mt-lg q-mb-lg text-center">
+            <div class="text-grey-7 q-mb-xs" style="font-size: 1.1em;">Ocjena:</div>
+            <q-rating
+              v-model="forma.Ocjena"
+              size="2.3em"
+              :max="5"
+              color="primary"
+              icon="star_border"
+              icon-selected="star"
+            />
+          </div>
 
-<div class="row justify-center q-gutter-sm">
+          <div class="row justify-center q-gutter-sm">
             <q-btn
               :label="view === 'add' ? 'Spremi' : 'Spremi izmjene'"
               color="primary" rounded
@@ -111,33 +114,38 @@
           </div>
         </q-card>
 
+        <!-- BRISANJE -->
         <div v-if="view === 'delete'">
           <q-card v-for="r in recenzije" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
             <b>{{ r.NazivObjekta }}</b>
             <small> — {{ r.username }}</small><br />
             {{ r.Komentar }}
+            <div class="text-grey-5 text-caption q-mt-xs">{{ formatDatum(r.DatumObjave) }}</div>
 
-          <div class="row justify-end q-mt-md">
-      <q-btn
-        v-if="canDelete(r)"
-        label="Obriši"
-        color="negative"
-        class="q-px-md q-mb-sm shadow-2"
-        rounded
-        unelevated
-        @click="obrisi(r.RecenzijaID)"
-      /> </div> </q-card>
-</div>
+            <div class="row justify-end q-mt-md">
+              <q-btn
+                v-if="canDelete(r)"
+                label="Obriši"
+                color="negative"
+                class="q-px-md q-mb-sm shadow-2"
+                rounded
+                unelevated
+                @click="obrisi(r.RecenzijaID)"
+              />
+            </div>
+          </q-card>
+        </div>
+
       </div>
-           </div> </q-page>
+    </div>
+  </q-page>
 </template>
 
 <script>
-
 import { inject } from "vue";
 import { Notify } from 'quasar';
 
-const API = "https://trenerkoapp.onrender.com/api";
+const API = "http://localhost:3000/api";
 
 export default {
   setup() {
@@ -191,8 +199,17 @@ export default {
       }));
     },
 
+    formatDatum(datum) {
+      if (!datum) return '';
+      const d = new Date(datum);
+      return d.toLocaleDateString('hr-HR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    },
+
     canDelete(r) {
-      return this.mainUser && r.user_id === this.mainUser.id;
+      return this.mainUser && r.KorisnikID === this.mainUser.id;
     },
 
     editRecenzija(r) {
@@ -202,7 +219,6 @@ export default {
     },
 
     async dodaj() {
-      // PROVJERA: Ako su polja prazna
       if (!this.forma.Komentar.trim() || !this.forma.ObjektID) {
         Notify.create({
           color: 'negative',
@@ -211,10 +227,13 @@ export default {
           position: 'top',
           timeout: 3000
         });
-        return; // Prekida metodu, ne ide dalje na API
+        return;
       }
 
-      await this.api("/recenzije", "POST", { ...this.forma, user_id: this.mainUser.id });
+      await this.api("/recenzije", "POST", {
+        ...this.forma,
+        KorisnikID: this.mainUser.id
+      });
 
       Notify.create({
         color: 'positive',
@@ -229,7 +248,6 @@ export default {
     },
 
     async spremiIzmjenu() {
-      // PROVJERA: Ako je komentar prazan kod uređivanja
       if (!this.forma.Komentar.trim()) {
         Notify.create({
           color: 'negative',
@@ -240,7 +258,10 @@ export default {
         return;
       }
 
-      await this.api(`/recenzije/${this.editId}`, "PUT", { ...this.forma, user_id: this.mainUser.id });
+      await this.api(`/recenzije/${this.editId}`, "PUT", {
+        ...this.forma,
+        KorisnikID: this.mainUser.id
+      });
 
       Notify.create({
         color: 'info',
@@ -254,7 +275,7 @@ export default {
     },
 
     async obrisi(id) {
-      await this.api(`/recenzije/${id}`, "DELETE", { user_id: this.mainUser.id });
+      await this.api(`/recenzije/${id}`, "DELETE", { KorisnikID: this.mainUser.id });
 
       Notify.create({
         color: 'warning',
