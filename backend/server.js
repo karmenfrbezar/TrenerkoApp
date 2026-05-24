@@ -236,50 +236,54 @@ app.get("/api/recenzije", (req, res) => {
   const sql = `
     SELECT 
       r.RecenzijaID,
+      r.KorisnikID,
       r.ObjektID,
       o.NazivObjekta,
       r.Ocjena,
       r.Komentar,
       r.DatumObjave,
-      k.Ime,
-      k.Prezime
+      CONCAT(k.Ime, ' ', k.Prezime) AS username
     FROM PI_Recenzija r
     JOIN PI_SportskiObjekt o ON o.ObjektID = r.ObjektID
     JOIN PI_Korisnik k ON k.KorisnikID = r.KorisnikID
     ORDER BY r.DatumObjave DESC
   `;
-
+ 
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
-
+ 
+ 
+ 
 app.post("/api/recenzije", (req, res) => {
-  const { Komentar, Ocjena, ObjektID, KorisnikID } = req.body;
-
+  const { Komentar, Ocjena, ObjektID, KorisnikID, user_id } = req.body;
+  const korisnik = KorisnikID || user_id;
+ 
   const sql = `
     INSERT INTO PI_Recenzija
     (KorisnikID, ObjektID, Ocjena, Komentar, DatumObjave)
     VALUES (?, ?, ?, ?, NOW())
   `;
-
-  connection.query(sql, [KorisnikID, ObjektID, Ocjena, Komentar], (err, result) => {
+ 
+  connection.query(sql, [korisnik, ObjektID, Ocjena, Komentar], (err, result) => {
     if (err) return res.status(500).json(err);
     res.json({ id: result.insertId });
   });
 });
-
+ 
 app.delete("/api/recenzije/:id", (req, res) => {
   const { id } = req.params;
-  const { KorisnikID } = req.body;
-
+  const { KorisnikID, user_id } = req.body;
+  const korisnik = KorisnikID || user_id;
+ 
   const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
   connection.query(checkSql, [id], (err, results) => {
     if (err) return res.status(500).json(err);
     if (results.length === 0) return res.status(404).json({ error: "Not found" });
-    if (results[0].KorisnikID !== KorisnikID) return res.status(403).json({ error: "No permission" });
-
+    if (results[0].KorisnikID != korisnik) return res.status(403).json({ error: "No permission" });
+ 
     const delSql = "DELETE FROM PI_Recenzija WHERE RecenzijaID=?";
     connection.query(delSql, [id], err => {
       if (err) return res.status(500).json(err);
@@ -287,23 +291,24 @@ app.delete("/api/recenzije/:id", (req, res) => {
     });
   });
 });
-
+ 
 app.put("/api/recenzije/:id", (req, res) => {
   const { id } = req.params;
-  const { Komentar, Ocjena, KorisnikID } = req.body;
-
+  const { Komentar, Ocjena, KorisnikID, user_id } = req.body;
+  const korisnik = KorisnikID || user_id;
+ 
   const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
   connection.query(checkSql, [id], (err, results) => {
     if (err) return res.status(500).json(err);
     if (results.length === 0) return res.status(404).json({ error: "Not found" });
-    if (results[0].KorisnikID !== KorisnikID) return res.status(403).json({ error: "No permission" });
-
+    if (results[0].KorisnikID != korisnik) return res.status(403).json({ error: "No permission" });
+ 
     const sql = `
       UPDATE PI_Recenzija 
       SET Komentar=?, Ocjena=? 
       WHERE RecenzijaID=?
     `;
-
+ 
     connection.query(sql, [Komentar, Ocjena, id], err => {
       if (err) return res.status(500).json(err);
       res.json({ success: true });
