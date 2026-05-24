@@ -10,7 +10,7 @@
         rounded
       />
       <q-btn
-        v-if="mainUser"
+v-if="mainUser && mainUser.role === 'Korisnik'"
         label="Dodaj recenziju"
         :flat="view !== 'add'"
         :color="view === 'add' ? 'primary' : 'grey-7'"
@@ -18,7 +18,7 @@
         rounded
       />
       <q-btn
-        v-if="mainUser"
+  v-if="mainUser && mainUser.role === 'Korisnik'"
         label="Obriši recenziju"
         :flat="view !== 'delete'"
         :color="view === 'delete' ? 'primary' : 'grey-7'"
@@ -116,7 +116,7 @@
 
         <!-- BRISANJE -->
         <div v-if="view === 'delete'">
-          <q-card v-for="r in recenzije" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
+          <q-card v-for="r in recenzije.filter(r => +r.KorisnikID === +mainUser.id)" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
             <b>{{ r.NazivObjekta }}</b>
             <small> — {{ r.username }}</small><br />
             {{ r.Komentar }}
