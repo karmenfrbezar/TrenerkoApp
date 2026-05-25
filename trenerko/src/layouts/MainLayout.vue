@@ -1,7 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
 
- 
     <q-header elevated class="header">
       <q-toolbar>
 
@@ -9,20 +8,45 @@
           Trenerko
         </q-toolbar-title>
 
-       
         <div class="nav">
           <q-btn flat label="Početna" to="/" />
-          <q-btn flat label="Objekti" to="/mapa" />
-          <q-btn flat label="Pretraga" to="/pretraga" />
+          <q-btn flat label="Objekti" to="/pretraga" />
+          <q-btn flat label="Događaji" to="/dogadjaji" />
+          <q-btn flat label="Karta" to="/mapa" />
           <q-btn flat label="Recenzije" to="/recenzije" />
 
+          <!-- Samo prijavljeni korisnik -->
+          <q-btn
+            v-if="currentUser"
+            flat
+            label="Favoriti"
+            icon="star"
+            to="/favoriti"
+          />
+          <q-btn
+            v-if="currentUser && isKorisnik"
+            flat
+            label="Interesi"
+            icon="sports"
+            to="/interesi"
+          />
+
+          <!-- Samo vlasnik i admin -->
           <q-btn
             v-if="isOwnerOrAdmin"
             flat
-            label="Dodaj"
+            label="Dodaj objekt"
             to="/unosobjekata"
           />
+          <q-btn
+            v-if="isOwner"
+            flat
+            label="Dashboard"
+            icon="dashboard"
+            to="/dashboard"
+          />
 
+          <!-- Samo admin -->
           <q-btn
             v-if="isAdmin"
             color="orange"
@@ -34,7 +58,6 @@
 
         <q-space />
 
-        
         <div class="auth">
           <template v-if="!currentUser">
             <q-btn flat label="Login" to="/login" />
@@ -75,7 +98,9 @@ export default {
 
     const role = computed(() => currentUser.value?.role?.trim())
 
-    const isAdmin = computed(() => role.value === 'Admin')
+    const isAdmin    = computed(() => role.value === 'Admin')
+    const isOwner    = computed(() => role.value === 'Vlasnik objekta')
+    const isKorisnik = computed(() => role.value === 'Korisnik')
 
     const isOwnerOrAdmin = computed(() =>
       ['Admin', 'Vlasnik objekta'].includes(role.value)
@@ -89,6 +114,8 @@ export default {
       currentUser,
       logout,
       isAdmin,
+      isOwner,
+      isKorisnik,
       isOwnerOrAdmin,
       userName
     }
@@ -107,19 +134,16 @@ export default {
   letter-spacing: 1px;
 }
 
-
 .nav {
   display: flex;
   gap: 4px;
 }
-
 
 .auth {
   display: flex;
   gap: 6px;
   align-items: center;
 }
-
 
 .q-btn {
   border-radius: 8px;

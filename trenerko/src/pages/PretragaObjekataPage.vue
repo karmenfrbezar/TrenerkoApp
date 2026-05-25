@@ -28,7 +28,14 @@
         :key="obj.id"
         class="col-12 col-md-6"
       >
-        <q-card flat bordered>
+        <q-card
+          flat
+          bordered
+          clickable
+          v-ripple
+          style="cursor: pointer;"
+          @click="openObjekt(obj.id || obj.ObjektID)"
+        >
           <q-card-section>
             <div class="row items-start justify-between">
               <div class="text-h6">{{ obj.NazivObjekta }}</div>
@@ -39,7 +46,7 @@
                 dense
                 :icon="isFavorite(obj.id) ? 'star' : 'star_border'"
                 :color="isFavorite(obj.id) ? 'orange' : 'grey'"
-                @click="toggleFavorite(obj.id)"
+                @click.stop="toggleFavorite(obj.id)"
               />
             </div>
 
@@ -63,7 +70,15 @@
               </span>
             </div>
 
-            <div class="q-mt-sm">
+            <div class="q-mt-sm row q-gutter-xs">
+              <q-btn
+                flat
+                dense
+                color="primary"
+                icon="info"
+                label="Detalji"
+                @click.stop="openObjekt(obj.id || obj.ObjektID)"
+              />
               <q-btn
                 flat
                 dense
@@ -71,6 +86,7 @@
                 icon="bar_chart"
                 label="Statistika"
                 :to="`/statistika/${obj.id}`"
+                @click.stop
               />
             </div>
           </q-card-section>
@@ -90,6 +106,7 @@
 
 <script>
 import { ref, computed, inject, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 const API = 'http://localhost:3000'
 
@@ -97,6 +114,7 @@ export default {
   name: 'PretragaObjekataPage',
   setup() {
     const mainUser = inject('user')
+    const router = useRouter()
     const objects = ref([])
     const reviews = ref([])
     const favorites = ref([])
@@ -187,6 +205,10 @@ export default {
       }
     }
 
+    const openObjekt = (id) => {
+      router.push(`/objekti/${id}`)
+    }
+
     return {
       mainUser,
       search,
@@ -195,7 +217,8 @@ export default {
       getAvgRating,
       getReviewCount,
       isFavorite,
-      toggleFavorite
+      toggleFavorite,
+      openObjekt
     }
   }
 }
