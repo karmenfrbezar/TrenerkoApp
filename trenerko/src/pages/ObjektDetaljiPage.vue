@@ -35,14 +35,8 @@
             </span>
           </div>
 
-          <!-- KARTA placeholder -->
-          <q-card flat bordered class="q-mb-md bg-grey-2 flex flex-center" style="height: 180px;">
-            <div class="text-grey-6 text-center">
-              <q-icon name="map" size="2em" /><br/>
-              <span class="text-caption">Karta — lokacija objekta</span><br/>
-              <span class="text-caption">Lat: {{ objekt.Lat }} | Lng: {{ objekt.Lng }}</span>
-            </div>
-          </q-card>
+          <!-- LEAFLET KARTA -->
+          <div ref="mapEl" class="map-box q-mb-md"></div>
 
           <div class="text-body1 q-mb-sm">{{ objekt.Opis }}</div>
 
@@ -174,10 +168,23 @@
 </template>
 
 <script>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import iconUrl from 'leaflet/dist/images/marker-icon.png'
+import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 const API = 'http://localhost:3000'
+
+const markerIcon = L.icon({
+  iconUrl,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+})
 
 export default {
   name: 'ObjektDetaljiPage',
@@ -189,6 +196,8 @@ export default {
     const recenzije = ref([])
     const dogadaji = ref([])
     const loading = ref(true)
+    const mapEl = ref(null)
+    let map = null
 
     const jeFavorit = ref(false)
     const favoritLoading = ref(false)
@@ -211,7 +220,6 @@ export default {
         recenzije.value = await rRes.json()
         dogadaji.value = await dRes.json()
 
-        // provjeri je li u favoritima
         if (mainUser.value) {
           const fRes = await fetch(`${API}/api/favoriti/${mainUser.value.id}`)
           const favoriti = await fRes.json()
@@ -224,7 +232,48 @@ export default {
       }
     }
 
-    onMounted(ucitaj)
+    // Inicijalizacija karte nakon što se objekt učita i DOM renderira
+    const initMap = () => {
+      if (!objekt.value || !mapEl.value) return
+      if (!objekt.value.Lat || !objekt.value.Lng) return
+
+      // Uništi staru kartu ako postoji
+      if (map) {
+        map.remove()
+        map = null
+      }
+
+      const lat = parseFloat(objekt.value.Lat)
+      const lng = parseFloat(objekt.value.Lng)
+
+      map = L.map(mapEl.value).setView([lat, lng], 15)
+
+      L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map)
+
+      L.marker([lat, lng], { icon: markerIcon })
+        .addTo(map)
+        .bindPopup(`<b>${objekt.value.NazivObjekta}</b><br>${objekt.value.Adresa}`)
+        .openPopup()
+    }
+
+    onMounted(async () => {
+      await ucitaj()
+      // Čekamo sljedeći tick da se DOM ažurira s objekt podacima
+      await nextTick()
+      initMap()
+    })
+
+    // Ako se ruta promijeni (drugi objekt), reinicijaliziramo kartu
+    watch(() => route.params.id, async () => {
+      loading.value = true
+      objekt.value = null
+      await ucitaj()
+      await nextTick()
+      initMap()
+    })
 
     const prosjecnaOcjena = computed(() => {
       if (recenzije.value.length === 0) return 0
@@ -286,10 +335,8 @@ export default {
         recenzijaGreska.value = false
         novaRecenzija.value = { Ocjena: 5, Komentar: '' }
         showRecenzijaForm.value = false
-        // reload recenzija
-        const rRes = await fetch(`${API}/api/recenzije`)
-        const sveRecenzije = await rRes.json()
-        recenzije.value = sveRecenzije.filter(r => r.ObjektID === id)
+        const rRes = await fetch(`${API}/api/recenzije/objekt/${id}`)
+        recenzije.value = await rRes.json()
       } catch {
         recenzijaPoruka.value = 'Greška pri slanju.'
         recenzijaGreska.value = true
@@ -311,6 +358,7 @@ export default {
       objekt,
       recenzije,
       loading,
+      mapEl,
       prosjecnaOcjena,
       nadolazaciDogadaji,
       jeFavorit,
@@ -327,3 +375,12 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.map-box {
+  height: 280px;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 0;
+}
+</style>
