@@ -22,6 +22,10 @@ connection.connect(err => {
   console.log("Connected to MySQL!");
 });
 
+// =====================================================
+// KORISNICI
+// =====================================================
+
 app.post("/api/register", (req, res) => {
   const { ime, prezime, email, password, spol, datumRodenja } = req.body;
 
@@ -31,33 +35,25 @@ app.post("/api/register", (req, res) => {
     VALUES (?, ?, ?, ?, ?, 'Korisnik', 'Aktivan', ?)
   `;
 
-  connection.query(
-    sql,
-    [ime, prezime, email, password, spol, datumRodenja],
-    (err, result) => {
-      if (err) {
-        console.error("REGISTER ERROR:", err);
-        return res.status(500).json({ error: err.message });
-      }
-      res.json({ success: true, id: result.insertId });
+  connection.query(sql, [ime, prezime, email, password, spol, datumRodenja], (err, result) => {
+    if (err) {
+      console.error("REGISTER ERROR:", err);
+      return res.status(500).json({ error: err.message });
     }
-  );
+    res.json({ success: true, id: result.insertId });
+  });
 });
 
 app.post("/api/login", (req, res) => {
   const { email, lozinka } = req.body;
 
-  const sql = `
-    SELECT * FROM PI_Korisnik 
-    WHERE Email=? AND Lozinka=?
-  `;
+  const sql = "SELECT * FROM PI_Korisnik WHERE Email=? AND Lozinka=?";
 
   connection.query(sql, [email, lozinka], (err, results) => {
     if (err) return res.status(500).json(err);
     if (results.length === 0) return res.status(401).json({ error: "Neispravni podaci" });
 
     const user = results[0];
-
     res.json({
       id: user.KorisnikID,
       email: user.Email,
@@ -76,7 +72,6 @@ app.get("/api/users", (req, res) => {
     FROM PI_Korisnik
     ORDER BY KorisnikID DESC
   `;
-
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
@@ -84,15 +79,20 @@ app.get("/api/users", (req, res) => {
 });
 
 app.put("/api/users/:id", (req, res) => {
-  const { ime, prezime, email } = req.body;
+  const { ime, prezime, email, status_racuna } = req.body;
   const { id } = req.params;
 
-  const sql = `
-    UPDATE PI_Korisnik 
-    SET Ime=?, Prezime=?, Email=? 
-    WHERE KorisnikID=?
-  `;
+  // Samo status update (blokiranje/aktiviranje)
+  if (status_racuna && !ime) {
+    const sql = "UPDATE PI_Korisnik SET status_racuna=? WHERE KorisnikID=?";
+    connection.query(sql, [status_racuna, id], err => {
+      if (err) return res.status(500).json(err);
+      return res.json({ success: true });
+    });
+    return;
+  }
 
+  const sql = "UPDATE PI_Korisnik SET Ime=?, Prezime=?, Email=? WHERE KorisnikID=?";
   connection.query(sql, [ime, prezime, email, id], err => {
     if (err) return res.status(500).json(err);
     res.json({ success: true });
@@ -116,12 +116,13 @@ app.delete("/api/users/:id", (req, res) => {
   });
 });
 
+// =====================================================
+// SPORTSKI OBJEKTI
+// =====================================================
 
-// dohvacanje podataka o sportskih objektima
 app.get("/api/objects-map", (req, res) => {
-
   const sql = `
-  SELECT
+    SELECT
       o.ObjektID AS id,
       o.NazivObjekta AS naziv,
       o.Adresa AS adresa,
@@ -129,34 +130,52 @@ app.get("/api/objects-map", (req, res) => {
       o.Kontakt AS kontakt,
       o.Lat AS lat,
       o.Lng AS lng,
-
-      ROUND(AVG(r.Ocjena),1) AS prosjekOcjena,
+      ROUND(AVG(r.Ocjena), 1) AS prosjekOcjena,
       COUNT(r.RecenzijaID) AS brojRecenzija
-
-  FROM PI_SportskiObjekt o
-
-  LEFT JOIN PI_Recenzija r
-  ON r.ObjektID = o.ObjektID
-
-  GROUP BY o.ObjektID
-  `
-
-  connection.query(sql,(err,result)=>{
-      if(err) return res.status(500).json(err)
-
-      res.json(result)
-  })
-}) 
+    FROM PI_SportskiObjekt o
+    LEFT JOIN PI_Recenzija r ON r.ObjektID = o.ObjektID
+    GROUP BY o.ObjektID
+  `;
+  connection.query(sql, (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json(result);
+  });
+});
 
 app.get("/api/objects", (req, res) => {
   const sql = `
     SELECT ObjektID AS id, NazivObjekta, Adresa, Opis, Lat, Lng, VlasnikID
     FROM PI_SportskiObjekt
   `;
-
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
+  });
+});
+
+app.get("/api/objects/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = `
+    SELECT
+      o.ObjektID AS id,
+      o.NazivObjekta,
+      o.Adresa,
+      o.Opis,
+      o.Kontakt,
+      o.Lat,
+      o.Lng,
+      o.VlasnikID,
+      ROUND(AVG(r.Ocjena), 1) AS prosjecnaOcjena,
+      COUNT(r.RecenzijaID) AS brojRecenzija
+    FROM PI_SportskiObjekt o
+    LEFT JOIN PI_Recenzija r ON r.ObjektID = o.ObjektID
+    WHERE o.ObjektID = ?
+    GROUP BY o.ObjektID
+  `;
+  connection.query(sql, [id], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (results.length === 0) return res.status(404).json({ error: "Objekt nije pronađen" });
+    res.json(results[0]);
   });
 });
 
@@ -168,10 +187,20 @@ app.post("/api/objects", (req, res) => {
     (NazivObjekta, Adresa, Opis, Kontakt, Lat, Lng, VlasnikID)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
-
   connection.query(sql, [naziv, adresa, opis, kontakt, lat, lng, vlasnikId], (err, result) => {
     if (err) return res.status(500).json(err);
     res.json({ id: result.insertId });
+  });
+});
+
+app.put("/api/objects/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const sql = "UPDATE PI_SportskiObjekt SET Status=? WHERE ObjektID=?";
+  connection.query(sql, [status, id], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
@@ -184,9 +213,13 @@ app.delete("/api/objects/:id", (req, res) => {
   });
 });
 
+// =====================================================
+// DOGAĐAJI
+// =====================================================
+
 app.get("/api/dogadjaji", (req, res) => {
   const sql = `
-    SELECT 
+    SELECT
       d.DogadajID,
       d.ObjektID,
       d.NazivDogadaja,
@@ -204,6 +237,28 @@ app.get("/api/dogadjaji", (req, res) => {
       console.error("DOGADAJI ERROR:", err);
       return res.status(500).json({ error: err.message });
     }
+    res.json(results);
+  });
+});
+
+app.get("/api/dogadjaji/objekt/:objektId", (req, res) => {
+  const { objektId } = req.params;
+  const sql = `
+    SELECT
+      d.DogadajID,
+      d.ObjektID,
+      d.NazivDogadaja,
+      d.OpisDogadaja,
+      d.DatumDogadaja,
+      d.Status,
+      o.NazivObjekta
+    FROM PI_Dogadaj d
+    JOIN PI_SportskiObjekt o ON o.ObjektID = d.ObjektID
+    WHERE d.ObjektID = ?
+    ORDER BY d.DatumDogadaja ASC
+  `;
+  connection.query(sql, [objektId], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
@@ -232,9 +287,13 @@ app.delete("/api/dogadjaji/:id", (req, res) => {
   });
 });
 
+// =====================================================
+// RECENZIJE
+// =====================================================
+
 app.get("/api/recenzije", (req, res) => {
   const sql = `
-    SELECT 
+    SELECT
       r.RecenzijaID,
       r.KorisnikID,
       r.ObjektID,
@@ -248,67 +307,60 @@ app.get("/api/recenzije", (req, res) => {
     JOIN PI_Korisnik k ON k.KorisnikID = r.KorisnikID
     ORDER BY r.DatumObjave DESC
   `;
- 
   connection.query(sql, (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
- 
- 
- 
+
+app.get("/api/recenzije/objekt/:objektId", (req, res) => {
+  const { objektId } = req.params;
+  const sql = `
+    SELECT
+      r.RecenzijaID,
+      r.KorisnikID,
+      r.ObjektID,
+      r.Ocjena,
+      r.Komentar,
+      r.DatumObjave,
+      CONCAT(k.Ime, ' ', k.Prezime) AS username
+    FROM PI_Recenzija r
+    JOIN PI_Korisnik k ON k.KorisnikID = r.KorisnikID
+    WHERE r.ObjektID = ?
+    ORDER BY r.DatumObjave DESC
+  `;
+  connection.query(sql, [objektId], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
 app.post("/api/recenzije", (req, res) => {
   const { Komentar, Ocjena, ObjektID, KorisnikID, user_id } = req.body;
   const korisnik = KorisnikID || user_id;
- 
+
   const sql = `
-    INSERT INTO PI_Recenzija
-    (KorisnikID, ObjektID, Ocjena, Komentar, DatumObjave)
+    INSERT INTO PI_Recenzija (KorisnikID, ObjektID, Ocjena, Komentar, DatumObjave)
     VALUES (?, ?, ?, ?, NOW())
   `;
- 
   connection.query(sql, [korisnik, ObjektID, Ocjena, Komentar], (err, result) => {
     if (err) return res.status(500).json(err);
     res.json({ id: result.insertId });
   });
 });
- 
-app.delete("/api/recenzije/:id", (req, res) => {
-  const { id } = req.params;
-  const { KorisnikID, user_id } = req.body;
-  const korisnik = KorisnikID || user_id;
- 
-  const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
-  connection.query(checkSql, [id], (err, results) => {
-    if (err) return res.status(500).json(err);
-    if (results.length === 0) return res.status(404).json({ error: "Not found" });
-    if (results[0].KorisnikID != korisnik) return res.status(403).json({ error: "No permission" });
- 
-    const delSql = "DELETE FROM PI_Recenzija WHERE RecenzijaID=?";
-    connection.query(delSql, [id], err => {
-      if (err) return res.status(500).json(err);
-      res.json({ success: true });
-    });
-  });
-});
- 
+
 app.put("/api/recenzije/:id", (req, res) => {
   const { id } = req.params;
   const { Komentar, Ocjena, KorisnikID, user_id } = req.body;
   const korisnik = KorisnikID || user_id;
- 
+
   const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
   connection.query(checkSql, [id], (err, results) => {
     if (err) return res.status(500).json(err);
     if (results.length === 0) return res.status(404).json({ error: "Not found" });
     if (results[0].KorisnikID != korisnik) return res.status(403).json({ error: "No permission" });
- 
-    const sql = `
-      UPDATE PI_Recenzija 
-      SET Komentar=?, Ocjena=? 
-      WHERE RecenzijaID=?
-    `;
- 
+
+    const sql = "UPDATE PI_Recenzija SET Komentar=?, Ocjena=? WHERE RecenzijaID=?";
     connection.query(sql, [Komentar, Ocjena, id], err => {
       if (err) return res.status(500).json(err);
       res.json({ success: true });
@@ -316,11 +368,33 @@ app.put("/api/recenzije/:id", (req, res) => {
   });
 });
 
+app.delete("/api/recenzije/:id", (req, res) => {
+  const { id } = req.params;
+  const { KorisnikID, user_id } = req.body;
+  const korisnik = KorisnikID || user_id;
+
+  const checkSql = "SELECT KorisnikID FROM PI_Recenzija WHERE RecenzijaID=?";
+  connection.query(checkSql, [id], (err, results) => {
+    if (err) return res.status(500).json(err);
+    if (results.length === 0) return res.status(404).json({ error: "Not found" });
+    if (results[0].KorisnikID != korisnik) return res.status(403).json({ error: "No permission" });
+
+    const delSql = "DELETE FROM PI_Recenzija WHERE RecenzijaID=?";
+    connection.query(delSql, [id], err => {
+      if (err) return res.status(500).json(err);
+      res.json({ success: true });
+    });
+  });
+});
+
+// =====================================================
+// FAVORITI
+// =====================================================
+
 app.get("/api/favoriti/:korisnikId", (req, res) => {
   const { korisnikId } = req.params;
-
   const sql = `
-    SELECT 
+    SELECT
       f.FavoritID,
       f.ObjektID,
       f.DatumDodavanja,
@@ -332,7 +406,6 @@ app.get("/api/favoriti/:korisnikId", (req, res) => {
     WHERE f.KorisnikID = ?
     ORDER BY f.DatumDodavanja DESC
   `;
-
   connection.query(sql, [korisnikId], (err, results) => {
     if (err) {
       console.error("FAVORITI ERROR:", err);
@@ -349,14 +422,11 @@ app.post("/api/favoriti", (req, res) => {
     return res.status(400).json({ error: "KorisnikID i ObjektID su obavezni" });
   }
 
-  const sql = `INSERT INTO PI_Favoriti (KorisnikID, ObjektID, DatumDodavanja) VALUES (?, ?, NOW())`;
-
+  const sql = "INSERT INTO PI_Favoriti (KorisnikID, ObjektID, DatumDodavanja) VALUES (?, ?, NOW())";
   connection.query(sql, [KorisnikID, ObjektID], (err, result) => {
     if (err) {
       console.error("POST FAVORITI ERROR:", err);
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ error: "Već u favoritima" });
-      }
+      if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: "Već u favoritima" });
       return res.status(500).json({ error: err.message });
     }
     res.json({ id: result.insertId });
@@ -366,9 +436,8 @@ app.post("/api/favoriti", (req, res) => {
 app.delete("/api/favoriti", (req, res) => {
   const { KorisnikID, ObjektID } = req.body;
 
-  const sql = `DELETE FROM PI_Favoriti WHERE KorisnikID = ? AND ObjektID = ?`;
-
-  connection.query(sql, [KorisnikID, ObjektID], (err) => {
+  const sql = "DELETE FROM PI_Favoriti WHERE KorisnikID = ? AND ObjektID = ?";
+  connection.query(sql, [KorisnikID, ObjektID], err => {
     if (err) {
       console.error("DELETE FAVORITI ERROR:", err);
       return res.status(500).json({ error: err.message });
@@ -376,6 +445,83 @@ app.delete("/api/favoriti", (req, res) => {
     res.json({ success: true });
   });
 });
+
+// =====================================================
+// SPORTOVI (katalog)
+// =====================================================
+
+app.get("/api/sportovi", (req, res) => {
+  const sql = "SELECT SportID, NazivSporta FROM PI_Sport ORDER BY NazivSporta ASC";
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+app.post("/api/sportovi", (req, res) => {
+  const { NazivSporta } = req.body;
+  if (!NazivSporta) return res.status(400).json({ error: "Naziv je obavezan" });
+
+  const sql = "INSERT INTO PI_Sport (NazivSporta) VALUES (?)";
+  connection.query(sql, [NazivSporta], (err, result) => {
+    if (err) {
+      if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: "Sport već postoji" });
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ id: result.insertId });
+  });
+});
+
+app.delete("/api/sportovi/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM PI_Sport WHERE SportID = ?";
+  connection.query(sql, [id], err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// =====================================================
+// INTERESI KORISNIKA
+// =====================================================
+
+app.get("/api/interesi/:korisnikId", (req, res) => {
+  const { korisnikId } = req.params;
+  const sql = `
+    SELECT i.SportID, s.NazivSporta
+    FROM PI_Interes i
+    JOIN PI_Sport s ON s.SportID = i.SportID
+    WHERE i.KorisnikID = ?
+    ORDER BY s.NazivSporta ASC
+  `;
+  connection.query(sql, [korisnikId], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+app.put("/api/interesi/:korisnikId", (req, res) => {
+  const { korisnikId } = req.params;
+  const { sportovi } = req.body;
+
+  const deleteSql = "DELETE FROM PI_Interes WHERE KorisnikID = ?";
+  connection.query(deleteSql, [korisnikId], err => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    if (!sportovi || sportovi.length === 0) {
+      return res.json({ success: true });
+    }
+
+    const values = sportovi.map(sportId => [korisnikId, sportId]);
+    const insertSql = "INSERT INTO PI_Interes (KorisnikID, SportID) VALUES ?";
+    connection.query(insertSql, [values], err => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  });
+});
+
+// =====================================================
 
 app.listen(port, () => {
   console.log("Server running on port " + port);
