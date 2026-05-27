@@ -325,23 +325,25 @@ export default {
     }
 
     const toggleBlokiranje = async (user) => {
-      const noviStatus = user.status_racuna === 'Blokiran' ? 'Aktivan' : 'Blokiran'
-      try {
-        await fetch(`${API}/api/users/${user.KorisnikID}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ime: user.Ime,
-            prezime: user.Prezime,
-            email: user.Email,
-            status_racuna: noviStatus
-          })
-        })
-        user.status_racuna = noviStatus
-      } catch (err) {
-        console.error('Greška:', err)
-      }
-    }
+  const noviStatus =
+    user.status_racuna === 'Blokiran'
+      ? 'Aktivan'
+      : 'Blokiran'
+
+  try {
+    await fetch(`${API}/api/users/${user.KorisnikID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status_racuna: noviStatus
+      })
+    })
+
+    user.status_racuna = noviStatus
+  } catch (err) {
+    console.error('Greška:', err)
+  }
+}
 
     // --- AKCIJE DASHBOARD ---
     const odobriObjekt = async (id) => {

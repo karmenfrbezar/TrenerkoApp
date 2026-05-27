@@ -44,6 +44,8 @@ app.post("/api/register", (req, res) => {
   });
 });
 
+
+
 app.post("/api/login", (req, res) => {
   const { email, lozinka } = req.body;
 
@@ -54,6 +56,14 @@ app.post("/api/login", (req, res) => {
     if (results.length === 0) return res.status(401).json({ error: "Neispravni podaci" });
 
     const user = results[0];
+
+     // BLOKIRAN RACUN
+    if (user.status_racuna === 'Blokiran') {
+      return res.status(403).json({
+        error: 'Račun je blokiran'
+      });
+    }
+
     res.json({
       id: user.KorisnikID,
       email: user.Email,
@@ -65,6 +75,10 @@ app.post("/api/login", (req, res) => {
     });
   });
 });
+
+
+
+
 
 app.get("/api/users", (req, res) => {
   const sql = `

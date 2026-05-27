@@ -4,11 +4,22 @@
     <q-header elevated class="header">
       <q-toolbar>
 
+        <!-- Hamburger menu za mobitele -->
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          class="lt-md"
+          @click="leftDrawerOpen = !leftDrawerOpen"
+        />
+
         <q-toolbar-title class="logo">
           Trenerko
         </q-toolbar-title>
 
-        <div class="nav">
+        <!-- Desktop navigacija -->
+        <div class="nav gt-sm">
           <q-btn flat label="Početna" to="/" />
           <q-btn flat label="Objekti" to="/pretraga" />
           <q-btn flat label="Događaji" to="/dogadjaji" />
@@ -58,7 +69,8 @@
 
         <q-space />
 
-        <div class="auth">
+        <!-- Desktop auth -->
+        <div class="auth gt-sm">
           <template v-if="!currentUser">
             <q-btn flat label="Login" to="/login" />
             <q-btn unelevated color="orange" label="Registracija" to="/registracija" />
@@ -72,6 +84,135 @@
 
       </q-toolbar>
     </q-header>
+
+    <!-- Mobile drawer -->
+    <q-drawer
+      v-model="leftDrawerOpen"
+      side="left"
+      bordered
+      class="bg-white lt-md"
+    >
+      <q-list padding>
+
+        <q-item clickable v-ripple to="/" @click="leftDrawerOpen = false">
+          <q-item-section>Početna</q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/pretraga" @click="leftDrawerOpen = false">
+          <q-item-section>Objekti</q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/dogadjaji" @click="leftDrawerOpen = false">
+          <q-item-section>Događaji</q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/mapa" @click="leftDrawerOpen = false">
+          <q-item-section>Karta</q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/recenzije" @click="leftDrawerOpen = false">
+          <q-item-section>Recenzije</q-item-section>
+        </q-item>
+
+        <!-- Samo prijavljeni korisnik -->
+        <q-item
+          v-if="currentUser"
+          clickable
+          v-ripple
+          to="/favoriti"
+          @click="leftDrawerOpen = false"
+        >
+          <q-item-section avatar>
+            <q-icon name="star" />
+          </q-item-section>
+          <q-item-section>Favoriti</q-item-section>
+        </q-item>
+
+        <q-item
+          v-if="currentUser && isKorisnik"
+          clickable
+          v-ripple
+          to="/interesi"
+          @click="leftDrawerOpen = false"
+        >
+          <q-item-section avatar>
+            <q-icon name="sports" />
+          </q-item-section>
+          <q-item-section>Interesi</q-item-section>
+        </q-item>
+
+        <!-- Samo vlasnik i admin -->
+        <q-item
+          v-if="isOwnerOrAdmin"
+          clickable
+          v-ripple
+          to="/unosobjekata"
+          @click="leftDrawerOpen = false"
+        >
+          <q-item-section>Dodaj objekt</q-item-section>
+        </q-item>
+
+        <q-item
+          v-if="isOwner"
+          clickable
+          v-ripple
+          to="/dashboard"
+          @click="leftDrawerOpen = false"
+        >
+          <q-item-section avatar>
+            <q-icon name="dashboard" />
+          </q-item-section>
+          <q-item-section>Dashboard</q-item-section>
+        </q-item>
+
+        <!-- Samo admin -->
+        <q-item
+          v-if="isAdmin"
+          clickable
+          v-ripple
+          to="/admin"
+          @click="leftDrawerOpen = false"
+        >
+          <q-item-section avatar>
+            <q-icon name="shield" color="orange" />
+          </q-item-section>
+          <q-item-section>Admin</q-item-section>
+        </q-item>
+
+        <q-separator class="q-my-sm" />
+
+        <!-- Login/Register -->
+        <template v-if="!currentUser">
+          <q-item clickable v-ripple to="/login" @click="leftDrawerOpen = false">
+            <q-item-section>Login</q-item-section>
+          </q-item>
+
+          <q-item clickable v-ripple to="/registracija" @click="leftDrawerOpen = false">
+            <q-item-section>Registracija</q-item-section>
+          </q-item>
+        </template>
+
+        <!-- User -->
+        <template v-else>
+
+          <q-item clickable v-ripple to="/profil" @click="leftDrawerOpen = false">
+            <q-item-section avatar>
+              <q-icon name="person" />
+            </q-item-section>
+            <q-item-section>{{ userName }}</q-item-section>
+          </q-item>
+
+          <q-item clickable v-ripple @click="logout">
+            <q-item-section avatar>
+              <q-icon name="logout" color="red" />
+            </q-item-section>
+            <q-item-section>Logout</q-item-section>
+          </q-item>
+
+        </template>
+
+      </q-list>
+    </q-drawer>
 
     <q-page-container>
       <router-view />
@@ -88,6 +229,9 @@ export default {
   setup() {
     const router = useRouter()
     const currentUser = ref(null)
+
+    // Drawer za mobitele
+    const leftDrawerOpen = ref(false)
 
     provide('user', currentUser)
 
@@ -117,7 +261,8 @@ export default {
       isOwner,
       isKorisnik,
       isOwnerOrAdmin,
-      userName
+      userName,
+      leftDrawerOpen
     }
   }
 }
@@ -147,5 +292,12 @@ export default {
 
 .q-btn {
   border-radius: 8px;
+}
+
+/* Mobile prilagodba */
+@media (max-width: 768px) {
+  .logo {
+    font-size: 18px;
+  }
 }
 </style>
