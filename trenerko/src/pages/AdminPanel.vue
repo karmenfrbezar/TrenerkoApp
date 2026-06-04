@@ -8,7 +8,7 @@
       </q-card-section>
     </q-card>
 
-    <!-- TABOVI -->
+    <!-- NAVIGACIJSKI TABOVI -->
     <q-tabs
       v-model="tab"
       dense
@@ -27,7 +27,7 @@
       <!-- ==================== DASHBOARD ==================== -->
       <q-tab-panel name="dashboard">
 
-        <!-- STATISTIKE -->
+        <!-- STATISTIKE – 4 kartice s brojevima (korisnici, objekti, događaji, recenzije) -->
         <div class="row q-col-gutter-sm q-mb-lg">
           <div v-for="s in stats" :key="s.label" class="col-6 col-sm-3">
             <q-card flat bordered class="text-center q-pa-md" :class="s.bg">
@@ -37,17 +37,20 @@
           </div>
         </div>
 
-        <!-- OBJEKTI NA ČEKANJU -->
+        <!-- OBJEKTI NA ČEKANJU – prikaz i odobrenje/odbijanje -->
         <div class="text-subtitle1 q-mb-sm">Objekti na čekanju odobrenja:</div>
 
+        <!-- Spinner dok se podaci učitavaju -->
         <div v-if="loadingDashboard" class="text-center q-pa-lg">
           <q-spinner color="red" size="2em" />
         </div>
 
+        <!-- Poruka ako nema objekata na čekanju -->
         <div v-else-if="objektiNaCekanju.length === 0" class="text-grey text-center q-pa-md">
           Nema objekata na čekanju.
         </div>
 
+        <!-- Kartica za svaki objekt na čekanju -->
         <q-card
           v-for="obj in objektiNaCekanju"
           :key="obj.id"
@@ -63,6 +66,7 @@
               </div>
               <div class="text-grey-6 text-caption">{{ obj.Adresa }}</div>
             </div>
+            <!-- Gumbi za odobrenje ili odbijanje objekta -->
             <div class="row q-gutter-xs">
               <q-btn
                 unelevated
@@ -87,6 +91,7 @@
       <!-- ==================== KORISNICI ==================== -->
       <q-tab-panel name="korisnici">
 
+        <!-- FILTERI – pretraga po imenu/emailu i filtriranje po ulozi -->
         <div class="row q-col-gutter-sm q-mb-md">
           <div class="col-12 col-sm-6">
             <q-input
@@ -109,6 +114,7 @@
           </div>
         </div>
 
+        <!-- TABLICA KORISNIKA – s akcijama blokiranja i brisanja -->
         <q-table
           :rows="filtrianiKorisnici"
           :columns="columns"
@@ -117,8 +123,10 @@
           flat
           bordered
         >
+          <!-- Prilagođeni slot za stupac akcija -->
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
+              <!-- Blokiraj/Aktiviraj – skriveno za admina -->
               <q-btn
                 v-if="props.row.Uloga !== 'Admin'"
                 flat
@@ -129,6 +137,7 @@
                 @click="toggleBlokiranje(props.row)"
                 class="q-mr-xs"
               />
+              <!-- Briši korisnika – skriveno za admina -->
               <q-btn
                 v-if="props.row.Uloga !== 'Admin'"
                 flat
@@ -147,7 +156,7 @@
       <!-- ==================== SPORTOVI ==================== -->
       <q-tab-panel name="sportovi">
 
-        <!-- DODAJ NOVI SPORT -->
+        <!-- FORMA ZA DODAVANJE NOVOG SPORTA -->
         <q-card flat bordered class="q-mb-md">
           <q-card-section>
             <div class="text-subtitle1 q-mb-sm">Dodaj novi sport:</div>
@@ -168,13 +177,14 @@
                 :loading="dodajeSport"
               />
             </div>
+            <!-- Povratna poruka (uspjeh ili greška) -->
             <div v-if="sportPoruka" class="q-mt-sm" :class="sportGreska ? 'text-red' : 'text-green'">
               {{ sportPoruka }}
             </div>
           </q-card-section>
         </q-card>
 
-        <!-- LISTA SPORTOVA -->
+        <!-- LISTA SVIH SPORTOVA – chipovi s mogućnošću brisanja -->
         <div v-if="loadingSportovi" class="text-center q-pa-lg">
           <q-spinner color="green" size="2em" />
         </div>
@@ -186,6 +196,7 @@
               <q-badge color="green" :label="sportovi.length" class="q-ml-sm" />
             </div>
 
+            <!-- Svaki sport prikazan kao chip, klik na X briše sport -->
             <div class="row q-col-gutter-xs">
               <div
                 v-for="sport in sportovi"
@@ -219,24 +230,30 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 
+// Bazna URL adresa API-ja
 const API = 'http://localhost:3000'
 
 export default {
   name: 'AdminPanel',
   setup() {
+    // Aktivni tab (dashboard / korisnici / sportovi)
     const tab = ref('dashboard')
 
-    // --- DASHBOARD ---
+    // ─── DASHBOARD ───────────────────────────────────────────
     const loadingDashboard = ref(true)
+
+    // Sirovi podaci dohvaćeni s API-ja
     const sviKorisnici = ref([])
     const sviObjekti = ref([])
     const sviDogadaji = ref([])
     const sveRecenzije = ref([])
 
+    // Filtrirani objekti čiji status još nije riješen
     const objektiNaCekanju = computed(() =>
       sviObjekti.value.filter(o => o.Status === 'Na čekanju')
     )
 
+    // Podaci za 4 statistike kartice
     const stats = computed(() => [
       { label: 'Korisnici',  value: sviKorisnici.value.length,  bg: 'bg-red-1' },
       { label: 'Objekti',    value: sviObjekti.value.length,    bg: 'bg-blue-1' },
@@ -244,11 +261,12 @@ export default {
       { label: 'Recenzije',  value: sveRecenzije.value.length,  bg: 'bg-orange-1' }
     ])
 
-    // --- KORISNICI ---
+    // ─── KORISNICI ────────────────────────────────────────────
     const loadingKorisnici = ref(false)
-    const searchKorisnik = ref('')
-    const filterUloga = ref('Sve')
+    const searchKorisnik = ref('')   // tekst za pretragu
+    const filterUloga = ref('Sve')   // odabrana uloga za filter
 
+    // Definicija stupaca tablice korisnika
     const columns = [
       { name: 'KorisnikID',   label: 'ID',      field: 'KorisnikID',   sortable: true },
       { name: 'Ime',          label: 'Ime',      field: 'Ime',          sortable: true },
@@ -259,6 +277,7 @@ export default {
       { name: 'actions',      label: 'Akcije',   field: 'actions' }
     ]
 
+    // Korisnici filtrirani prema pretrazi i odabranoj ulozi
     const filtrianiKorisnici = computed(() => {
       return sviKorisnici.value.filter(u => {
         const ulogaOk = filterUloga.value === 'Sve' || u.Uloga === filterUloga.value
@@ -268,15 +287,16 @@ export default {
       })
     })
 
-    // --- SPORTOVI ---
+    // ─── SPORTOVI ─────────────────────────────────────────────
     const sportovi = ref([])
     const loadingSportovi = ref(false)
-    const noviSport = ref('')
-    const dodajeSport = ref(false)
-    const sportPoruka = ref('')
-    const sportGreska = ref(false)
+    const noviSport = ref('')         // unos naziva novog sporta
+    const dodajeSport = ref(false)    // loading stanje gumba
+    const sportPoruka = ref('')       // povratna poruka korisniku
+    const sportGreska = ref(false)    // true = greška, false = uspjeh
 
-    // --- UČITAVANJE ---
+    // ─── DOHVAT PODATAKA ─────────────────────────────────────
+    // Paralelni dohvat svih potrebnih podataka za dashboard
     const ucitajSve = async () => {
       loadingDashboard.value = true
       try {
@@ -297,6 +317,7 @@ export default {
       }
     }
 
+    // Dohvat liste sportova
     const ucitajSportove = async () => {
       loadingSportovi.value = true
       try {
@@ -309,12 +330,15 @@ export default {
       }
     }
 
+    // Inicijalno učitavanje podataka pri montiranju komponente
     onMounted(async () => {
       await ucitajSve()
       await ucitajSportove()
     })
 
-    // --- AKCIJE KORISNICI ---
+    // ─── AKCIJE – KORISNICI ───────────────────────────────────
+
+    // Brisanje korisnika i uklanjanje iz lokalne liste
     const deleteUser = async (id) => {
       try {
         await fetch(`${API}/api/users/${id}`, { method: 'DELETE' })
@@ -324,28 +348,31 @@ export default {
       }
     }
 
+    // Prebacivanje statusa korisnika između Aktivan i Blokiran
     const toggleBlokiranje = async (user) => {
-  const noviStatus =
-    user.status_racuna === 'Blokiran'
-      ? 'Aktivan'
-      : 'Blokiran'
+      const noviStatus =
+        user.status_racuna === 'Blokiran'
+          ? 'Aktivan'
+          : 'Blokiran'
 
-  try {
-    await fetch(`${API}/api/users/${user.KorisnikID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status_racuna: noviStatus
-      })
-    })
+      try {
+        await fetch(`${API}/api/users/${user.KorisnikID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status_racuna: noviStatus
+          })
+        })
+        // Lokalno ažuriranje bez ponovnog dohvata s API-ja
+        user.status_racuna = noviStatus
+      } catch (err) {
+        console.error('Greška:', err)
+      }
+    }
 
-    user.status_racuna = noviStatus
-  } catch (err) {
-    console.error('Greška:', err)
-  }
-}
+    // ─── AKCIJE – DASHBOARD ───────────────────────────────────
 
-    // --- AKCIJE DASHBOARD ---
+    // Odobravanje objekta i lokalno ažuriranje statusa
     const odobriObjekt = async (id) => {
       try {
         await fetch(`${API}/api/objects/${id}/status`, {
@@ -360,6 +387,7 @@ export default {
       }
     }
 
+    // Odbijanje objekta i lokalno ažuriranje statusa
     const odbijObjekt = async (id) => {
       try {
         await fetch(`${API}/api/objects/${id}/status`, {
@@ -374,7 +402,9 @@ export default {
       }
     }
 
-    // --- AKCIJE SPORTOVI ---
+    // ─── AKCIJE – SPORTOVI ────────────────────────────────────
+
+    // Dodavanje novog sporta; spriječava prazne unose
     const dodajSport = async () => {
       if (!noviSport.value.trim()) return
       dodajeSport.value = true
@@ -390,6 +420,7 @@ export default {
           sportPoruka.value = data.error
           sportGreska.value = true
         } else {
+          // Dodaj sport u lokalnu listu bez ponovnog dohvata
           sportovi.value.push({ SportID: data.id, NazivSporta: noviSport.value.trim() })
           noviSport.value = ''
           sportPoruka.value = 'Sport uspješno dodan!'
@@ -403,6 +434,7 @@ export default {
       }
     }
 
+    // Brisanje sporta i uklanjanje iz lokalne liste
     const obrisiSport = async (id) => {
       try {
         await fetch(`${API}/api/sportovi/${id}`, { method: 'DELETE' })
@@ -412,6 +444,7 @@ export default {
       }
     }
 
+    // Formatiranje datuma u hrvatski format (dd. mm. yyyy.)
     const formatDate = (iso) => {
       if (!iso) return '—'
       return new Date(iso).toLocaleDateString('hr-HR')

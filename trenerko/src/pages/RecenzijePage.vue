@@ -1,7 +1,10 @@
 <template>
   <q-page class="q-pa-md">
 
+    <!-- GORNJI MENU ZA PROMJENU VIEW-A -->
     <div class="row justify-center q-gutter-sm q-mb-md">
+
+      <!-- LISTA RECENZIJA -->
       <q-btn
         label="Popis recenzija"
         :flat="view !== 'list'"
@@ -9,6 +12,8 @@
         @click="view = 'list'"
         rounded
       />
+
+      <!-- DODAVANJE RECENZIJE (SAMO KORISNIK) -->
       <q-btn
         v-if="mainUser && mainUser.role === 'Korisnik'"
         label="Dodaj recenziju"
@@ -17,6 +22,8 @@
         @click="view = 'add'"
         rounded
       />
+
+      <!-- BRISANJE RECENZIJE (KORISNIK + ADMIN) -->
       <q-btn
         v-if="mainUser && (mainUser.role === 'Korisnik' || mainUser.role === 'Admin')"
         label="Obriši recenziju"
@@ -27,16 +34,22 @@
       />
     </div>
 
+    <!-- CENTRALNI KONTEJNER -->
     <div class="row justify-center">
       <div style="width: 100%; max-width: 600px;">
 
+        <!-- ================= LISTA RECENZIJA ================= -->
         <div v-if="view === 'list'">
+
+          <!-- FILTER PO NAZIVU OBJEKTA -->
           <q-input
             v-model="filterText"
             label="Filtriraj po nazivu objekta"
             dense clearable
             class="q-mb-sm"
           />
+
+          <!-- FILTER PO OBJEKTU -->
           <q-select
             v-model="filterObjekt"
             :options="objekti"
@@ -48,15 +61,27 @@
             class="q-mb-md"
           />
 
-          <q-card v-for="r in filtrirane" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
+          <!-- LISTA FILTRIRANIH RECENZIJA -->
+          <q-card
+            v-for="r in filtrirane"
+            :key="r.RecenzijaID"
+            class="q-pa-md q-mb-md"
+            style="border-radius: 15px;"
+          >
+            <!-- NAZIV OBJEKTA -->
             <b>{{ r.NazivObjekta }}</b>
             : {{ r.Ocjena }} ⭐ <br />
+
+            <!-- KOMENTAR -->
             <div class="q-mb-sm">{{ r.Komentar }}</div>
+
+            <!-- USER + DATUM -->
             <div class="row justify-between items-center q-mt-xs">
               <small class="text-grey-7"> - {{ r.username }}</small>
               <small class="text-grey-5">{{ formatDatum(r.DatumObjave) }}</small>
             </div>
 
+            <!-- GUMB ZA UREĐIVANJE (SAMO VLASNIK RECENZIJE) -->
             <div class="row justify-end q-mt-md">
               <q-btn
                 v-if="mainUser && r.KorisnikID === mainUser.id"
@@ -72,7 +97,14 @@
           </q-card>
         </div>
 
-        <q-card v-if="view === 'add' || view === 'edit'" class="q-pa-md" style="border-radius: 15px;">
+        <!-- ================= DODAVANJE / EDIT FORMA ================= -->
+        <q-card
+          v-if="view === 'add' || view === 'edit'"
+          class="q-pa-md"
+          style="border-radius: 15px;"
+        >
+
+          <!-- ODABIR OBJEKTA (SAMO ZA ADD) -->
           <q-select
             v-if="view === 'add'"
             v-model="forma.ObjektID"
@@ -82,6 +114,8 @@
             emit-value map-options
             label="Sportski objekt"
           />
+
+          <!-- KOMENTAR -->
           <q-input
             v-model="forma.Komentar"
             label="Komentar"
@@ -90,8 +124,12 @@
             outlined
           />
 
+          <!-- OCJENA -->
           <div class="q-mt-lg q-mb-lg text-center">
-            <div class="text-grey-7 q-mb-xs" style="font-size: 1.1em;">Ocjena:</div>
+            <div class="text-grey-7 q-mb-xs" style="font-size: 1.1em;">
+              Ocjena:
+            </div>
+
             <q-rating
               v-model="forma.Ocjena"
               size="2.3em"
@@ -102,23 +140,49 @@
             />
           </div>
 
+          <!-- AKCIJSKI GUMBI -->
           <div class="row justify-center q-gutter-sm">
+
+            <!-- SPREMI / UPDATE -->
             <q-btn
               :label="view === 'add' ? 'Spremi' : 'Spremi izmjene'"
-              color="primary" rounded
+              color="primary"
+              rounded
               @click="view === 'add' ? dodaj() : spremiIzmjenu()"
             />
+
+            <!-- ODUSTANI -->
             <q-btn flat label="Odustani" @click="view = 'list'" />
           </div>
         </q-card>
 
+        <!-- ================= DELETE VIEW ================= -->
         <div v-if="view === 'delete'">
-          <q-card v-for="r in recenzije.filter(r => mainUser && (mainUser.role === 'Admin' || +r.KorisnikID === +mainUser.id))" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
+
+          <!-- LISTA RECENZIJA ZA BRISANJE -->
+          <q-card
+            v-for="r in recenzije.filter(r =>
+              mainUser &&
+              (mainUser.role === 'Admin' || +r.KorisnikID === +mainUser.id)
+            )"
+            :key="r.RecenzijaID"
+            class="q-pa-md q-mb-md"
+            style="border-radius: 15px;"
+          >
+
+            <!-- OBJEKT + USER -->
             <b>{{ r.NazivObjekta }}</b>
             <small> — {{ r.username }}</small><br />
-            {{ r.Komentar }}
-            <div class="text-grey-5 text-caption q-mt-xs">{{ formatDatum(r.DatumObjave) }}</div>
 
+            <!-- KOMENTAR -->
+            {{ r.Komentar }}
+
+            <!-- DATUM -->
+            <div class="text-grey-5 text-caption q-mt-xs">
+              {{ formatDatum(r.DatumObjave) }}
+            </div>
+
+            <!-- DELETE GUMB -->
             <div class="row justify-end q-mt-md">
               <q-btn
                 v-if="canDelete(r)"
@@ -146,35 +210,59 @@ const API = "http://localhost:3000/api";
 
 export default {
   setup() {
+    // GLOBALNI USER (LOGIN STATE)
     return { mainUser: inject("user") };
   },
 
   data() {
     return {
+      // trenutno aktivni view (list/add/edit/delete)
       view: "list",
+
+      // sve recenzije iz baze
       recenzije: [],
+
+      // svi objekti za select
       objekti: [],
+
+      // filter po nazivu
       filterText: "",
+
+      // filter po objektu
       filterObjekt: null,
-      forma: { Komentar: "", Ocjena: 5, ObjektID: null },
+
+      // forma za add/edit
+      forma: {
+        Komentar: "",
+        Ocjena: 5,
+        ObjektID: null
+      },
+
+      // ID recenzije koja se uređuje
       editId: null,
     };
   },
 
   computed: {
+    // filtrirane recenzije (search + filter objekt)
     filtrirane() {
       return this.recenzije.filter(r =>
         (!this.filterObjekt || +r.ObjektID === +this.filterObjekt) &&
-        (!this.filterText || r.NazivObjekta.toLowerCase().includes(this.filterText.toLowerCase()))
+        (!this.filterText ||
+          r.NazivObjekta.toLowerCase().includes(this.filterText.toLowerCase())
+        )
       );
     },
   },
 
   mounted() {
+    // inicijalno učitavanje podataka
     this.ucitaj();
   },
 
   methods: {
+
+    // GENERIČKI API HELPER
     async api(url, method = "GET", body) {
       const res = await fetch(`${API}${url}`, {
         method,
@@ -184,27 +272,37 @@ export default {
       return res.json();
     },
 
+    // UČITAVANJE RECENZIJA + OBJEKATA
     async ucitaj() {
       const [rec, obj] = await Promise.all([
         this.api("/recenzije"),
         this.api("/objects"),
       ]);
+
       this.recenzije = rec;
+
+      // normalizacija objekata (različita API imena)
       this.objekti = obj.map(o => ({
         ObjektID: o.ObjektID ?? o.id,
         NazivObjekta: o.NazivObjekta ?? o.naziv ?? o.name
       }));
     },
 
+    // FORMAT DATUMA HR
     formatDatum(datum) {
       if (!datum) return '';
       const d = new Date(datum);
+
       return d.toLocaleDateString('hr-HR', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       });
     },
 
+    // PROVJERA MOGU LI BRISATI
     canDelete(r) {
       return this.mainUser && (
         +r.KorisnikID === +this.mainUser.id ||
@@ -212,14 +310,22 @@ export default {
       );
     },
 
+    // POKRETANJE EDITA
     editRecenzija(r) {
-      this.forma = { Komentar: r.Komentar, Ocjena: r.Ocjena, ObjektID: r.ObjektID };
+      this.forma = {
+        Komentar: r.Komentar,
+        Ocjena: r.Ocjena,
+        ObjektID: r.ObjektID
+      };
+
       this.editId = r.RecenzijaID;
       this.view = "edit";
     },
 
+    // DODAVANJE RECENZIJE
     async dodaj() {
       if (!this.forma.Komentar.trim() || !this.forma.ObjektID) {
+
         Notify.create({
           color: 'negative',
           icon: 'report_problem',
@@ -227,6 +333,7 @@ export default {
           position: 'top',
           timeout: 3000
         });
+
         return;
       }
 
@@ -247,14 +354,17 @@ export default {
       this.ucitaj();
     },
 
+    // SPREMANJE IZMJENA
     async spremiIzmjenu() {
       if (!this.forma.Komentar.trim()) {
+
         Notify.create({
           color: 'negative',
           icon: 'warning',
           message: 'Komentar ne može biti prazan!',
           position: 'top'
         });
+
         return;
       }
 
@@ -274,8 +384,11 @@ export default {
       this.ucitaj();
     },
 
+    // BRISANJE RECENZIJE
     async obrisi(id) {
-      await this.api(`/recenzije/${id}`, "DELETE", { KorisnikID: this.mainUser.id });
+      await this.api(`/recenzije/${id}`, "DELETE", {
+        KorisnikID: this.mainUser.id
+      });
 
       Notify.create({
         color: 'warning',

@@ -1,17 +1,19 @@
 <template>
   <q-page class="q-pa-md">
 
+    <!-- Spinner dok se podaci učitavaju -->
     <div v-if="loading" class="text-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
+    <!-- Poruka ako objekt nije pronađen -->
     <div v-else-if="!objekt" class="text-center q-pa-xl text-grey">
       Objekt nije pronađen.
     </div>
 
     <div v-else>
 
-      <!-- ZAGLAVLJE OBJEKTA -->
+      <!-- ZAGLAVLJE OBJEKTA – naziv, adresa, ocjena, karta, opis -->
       <q-card flat bordered class="q-mb-md">
         <q-card-section class="bg-blue-6 text-white">
           <div class="text-h5">{{ objekt.NazivObjekta }}</div>
@@ -19,6 +21,7 @@
         </q-card-section>
 
         <q-card-section>
+          <!-- Prikaz prosječne ocjene i broja recenzija -->
           <div class="row items-center q-mb-sm">
             <q-rating
               :model-value="prosjecnaOcjena"
@@ -35,13 +38,14 @@
             </span>
           </div>
 
-          <!-- LEAFLET KARTA -->
+          <!-- LEAFLET KARTA – prikazuje lokaciju objekta -->
           <div ref="mapEl" class="map-box q-mb-md"></div>
 
           <div class="text-body1 q-mb-sm">{{ objekt.Opis }}</div>
 
-          <!-- AKCIJSKI GUMBI -->
+          <!-- AKCIJSKI GUMBI – favoriti, recenzija, statistika -->
           <div class="row q-gutter-sm q-mt-md">
+            <!-- Gumb za dodavanje/uklanjanje iz favorita (samo za prijavljene) -->
             <q-btn
               v-if="mainUser"
               unelevated
@@ -52,6 +56,7 @@
               @click="toggleFavorit"
               :loading="favoritLoading"
             />
+            <!-- Gumb za pisanje recenzije (samo za ulogu Korisnik) -->
             <q-btn
               v-if="mainUser && mainUser.role === 'Korisnik'"
               unelevated
@@ -60,6 +65,7 @@
               label="Napiši recenziju"
               @click="showRecenzijaForm = !showRecenzijaForm"
             />
+            <!-- Link na stranicu statistike objekta -->
             <q-btn
               flat
               color="primary"
@@ -71,11 +77,12 @@
         </q-card-section>
       </q-card>
 
-      <!-- FORMA ZA RECENZIJU -->
+      <!-- FORMA ZA RECENZIJU – vidljiva samo kad korisnik klikne gumb -->
       <q-card v-if="showRecenzijaForm && mainUser" flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">Nova recenzija</div>
 
+          <!-- Odabir ocjene zvjezdicama -->
           <div class="q-mb-md text-center">
             <div class="text-grey-7 q-mb-xs">Ocjena:</div>
             <q-rating
@@ -107,13 +114,14 @@
             <q-btn flat label="Odustani" @click="showRecenzijaForm = false" />
           </div>
 
+          <!-- Povratna poruka (uspjeh ili greška) -->
           <div v-if="recenzijaPoruka" class="q-mt-sm" :class="recenzijaGreska ? 'text-red' : 'text-green'">
             {{ recenzijaPoruka }}
           </div>
         </q-card-section>
       </q-card>
 
-      <!-- NADOLAZECI DOGADAJI -->
+      <!-- NADOLAZECI DOGADAJI – samo aktivni događaji -->
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">Nadolazeći događaji:</div>
@@ -137,7 +145,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- RECENZIJE -->
+      <!-- RECENZIJE – lista svih recenzija s ocjenom i komentarom -->
       <q-card flat bordered>
         <q-card-section>
           <div class="text-subtitle1 q-mb-sm">Recenzije korisnika:</div>
@@ -175,8 +183,10 @@ import 'leaflet/dist/leaflet.css'
 import iconUrl from 'leaflet/dist/images/marker-icon.png'
 import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
+// Bazna URL adresa API-ja
 const API = 'http://localhost:3000'
 
+// Leaflet marker ikona s ispravnim putanjama za webpack/vite
 const markerIcon = L.icon({
   iconUrl,
   shadowUrl: iconShadow,
@@ -190,24 +200,30 @@ export default {
   name: 'ObjektDetaljiPage',
   setup() {
     const route = useRoute()
-    const mainUser = inject('user')
+    const mainUser = inject('user')  // prijavljeni korisnik iz globalnog provide/inject
 
+    // Podaci objekta, recenzija i događaja
     const objekt = ref(null)
     const recenzije = ref([])
     const dogadaji = ref([])
     const loading = ref(true)
+
+    // Referenca na DOM element karte i instanca Leaflet mape
     const mapEl = ref(null)
     let map = null
 
+    // Stanje favorita za trenutni objekt
     const jeFavorit = ref(false)
     const favoritLoading = ref(false)
 
+    // Stanje forme za novu recenziju
     const showRecenzijaForm = ref(false)
     const novaRecenzija = ref({ Ocjena: 5, Komentar: '' })
     const recenzijaLoading = ref(false)
     const recenzijaPoruka = ref('')
     const recenzijaGreska = ref(false)
 
+    // Paralelni dohvat objekta, recenzija i događaja; provjera favorita ako je korisnik prijavljen
     const ucitaj = async () => {
       const id = Number(route.params.id)
       try {
@@ -220,6 +236,7 @@ export default {
         recenzije.value = await rRes.json()
         dogadaji.value = await dRes.json()
 
+        // Provjeri je li objekt već u favoritima prijavljenog korisnika
         if (mainUser.value) {
           const fRes = await fetch(`${API}/api/favoriti/${mainUser.value.id}`)
           const favoriti = await fRes.json()
@@ -232,12 +249,12 @@ export default {
       }
     }
 
-    // Inicijalizacija karte nakon što se objekt učita i DOM renderira
+    // Inicijalizacija Leaflet karte nakon što se objekt učita i DOM renderira
     const initMap = () => {
       if (!objekt.value || !mapEl.value) return
       if (!objekt.value.Lat || !objekt.value.Lng) return
 
-      // Uništi staru kartu ako postoji
+      // Uništi staru kartu ako postoji (npr. pri promjeni rute)
       if (map) {
         map.remove()
         map = null
@@ -253,6 +270,7 @@ export default {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map)
 
+      // Marker s popupom na lokaciji objekta
       L.marker([lat, lng], { icon: markerIcon })
         .addTo(map)
         .bindPopup(`<b>${objekt.value.NazivObjekta}</b><br>${objekt.value.Adresa}`)
@@ -275,15 +293,18 @@ export default {
       initMap()
     })
 
+    // Prosječna ocjena izračunata iz svih recenzija
     const prosjecnaOcjena = computed(() => {
       if (recenzije.value.length === 0) return 0
       return recenzije.value.reduce((s, r) => s + Number(r.Ocjena), 0) / recenzije.value.length
     })
 
+    // Samo događaji sa statusom Aktivan
     const nadolazaciDogadaji = computed(() =>
       dogadaji.value.filter(d => d.Status === 'Aktivan')
     )
 
+    // Dodaje ili uklanja objekt iz favorita ovisno o trenutnom stanju
     const toggleFavorit = async () => {
       if (!mainUser.value) return
       favoritLoading.value = true
@@ -311,6 +332,7 @@ export default {
       }
     }
 
+    // Validacija, slanje recenzije i osvježavanje liste recenzija
     const posaljiRecenziju = async () => {
       if (!novaRecenzija.value.Komentar.trim()) {
         recenzijaPoruka.value = 'Komentar ne može biti prazan.'
@@ -335,6 +357,7 @@ export default {
         recenzijaGreska.value = false
         novaRecenzija.value = { Ocjena: 5, Komentar: '' }
         showRecenzijaForm.value = false
+        // Osvježi listu recenzija nakon uspješnog slanja
         const rRes = await fetch(`${API}/api/recenzije/objekt/${id}`)
         recenzije.value = await rRes.json()
       } catch {
@@ -345,6 +368,7 @@ export default {
       }
     }
 
+    // Formatiranje datuma u hrvatski format s vremenom (dd. mm. yyyy. hh:mm)
     const formatDate = (iso) => {
       if (!iso) return '—'
       return new Date(iso).toLocaleString('hr-HR', {
@@ -377,6 +401,7 @@ export default {
 </script>
 
 <style scoped>
+/* Fiksna visina karte s blago zaobljenim rubovima */
 .map-box {
   height: 280px;
   border-radius: 10px;

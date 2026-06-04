@@ -1,6 +1,7 @@
 <template>
   <q-page class="q-pa-md">
 
+    <!-- ZAGLAVLJE – ime i prezime prijavljenog vlasnika -->
     <q-card flat bordered class="q-mb-md">
       <q-card-section class="bg-purple-6 text-white">
         <div class="text-h6">
@@ -9,13 +10,14 @@
       </q-card-section>
     </q-card>
 
+    <!-- Spinner dok se podaci učitavaju -->
     <div v-if="loading" class="text-center q-pa-lg">
       <q-spinner color="purple" size="2em" />
     </div>
 
     <div v-else>
 
-      <!-- Statistike -->
+      <!-- STATISTIKE – sažetak objekata, događaja, recenzija i prosječne ocjene -->
       <div class="text-subtitle1 q-mb-sm">Pregled mojih objekata:</div>
       <div class="row q-col-gutter-sm q-mb-lg">
         <div v-for="s in summaryStats" :key="s.label" class="col-6 col-sm-3">
@@ -26,7 +28,7 @@
         </div>
       </div>
 
-      <!-- Lista objekata -->
+      <!-- LISTA MOJIH OBJEKATA – s ocjenom, brojem recenzija i događaja -->
       <div class="text-subtitle1 q-mb-sm">Moji objekti:</div>
 
       <div v-if="myObjects.length === 0" class="text-grey text-center q-pa-md">
@@ -50,6 +52,7 @@
             </div>
           </div>
           <div>
+            <!-- Link na statistiku objekta -->
             <q-btn
               flat
               dense
@@ -58,6 +61,7 @@
               label="Statistika"
               :to="`/statistika/${obj.id}`"
             />
+            <!-- Pokretanje dialoga za potvrdu brisanja -->
             <q-btn
               flat
               dense
@@ -69,7 +73,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- Lista događaja -->
+      <!-- LISTA MOJIH DOGAĐAJA – filtrirani po objektima vlasnika -->
       <div class="text-subtitle1 q-mt-lg q-mb-sm">Moji događaji:</div>
 
       <div v-if="myEvents.length === 0" class="text-grey text-center q-pa-md">
@@ -93,6 +97,7 @@
               {{ ev.OpisDogadaja }}
             </div>
           </div>
+          <!-- Direktno brisanje događaja bez dialoga -->
           <q-btn
             flat
             dense
@@ -103,7 +108,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- Akcije -->
+      <!-- AKCIJSKI GUMBI – dodavanje novog objekta ili događaja -->
       <div class="row q-col-gutter-sm q-mt-lg">
         <div class="col-12 col-sm-6">
           <q-btn
@@ -129,7 +134,7 @@
 
     </div>
 
-    <!-- Dialog za potvrdu brisanja objekta -->
+    <!-- DIALOG – potvrda brisanja objekta -->
     <q-dialog v-model="deleteDialog">
       <q-card style="min-width: 320px;">
         <q-card-section>
@@ -146,13 +151,14 @@
       </q-card>
     </q-dialog>
 
-    <!-- Dialog za dodavanje događaja -->
+    <!-- DIALOG – forma za dodavanje novog događaja -->
     <q-dialog v-model="eventDialog">
       <q-card style="min-width: 360px;">
         <q-card-section>
           <div class="text-h6">Novi događaj</div>
         </q-card-section>
         <q-card-section class="q-gutter-md">
+          <!-- Odabir objekta na koji se veže događaj -->
           <q-select
             v-model="newEvent.ObjektID"
             :options="objectOptions"
@@ -194,22 +200,26 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+// Bazna URL adresa API-ja
 const API = 'http://localhost:3000'
 
 export default {
   name: 'VlasnikDashboard',
   setup() {
-    const mainUser = inject('user')
+    const mainUser = inject('user')  // prijavljeni korisnik iz globalnog provide/inject
     const router = useRouter()
 
+    // Sirovi podaci dohvaćeni s API-ja
     const objects = ref([])
     const reviews = ref([])
     const events = ref([])
     const loading = ref(true)
 
+    // Stanje dialoga za brisanje objekta
     const deleteDialog = ref(false)
-    const objectToDelete = ref(null)
+    const objectToDelete = ref(null)  // objekt koji se briše
 
+    // Stanje dialoga i forme za novi događaj
     const eventDialog = ref(false)
     const newEvent = ref({
       ObjektID: null,
@@ -218,6 +228,7 @@ export default {
       DatumDogadaja: ''
     })
 
+    // Provjera uloge pri montiranju; preusmjerava ako nije vlasnik
     onMounted(async () => {
       if (!mainUser.value || mainUser.value.role?.trim() !== 'Vlasnik objekta') {
         router.push('/')
@@ -226,6 +237,7 @@ export default {
       await loadData()
     })
 
+    // Paralelni dohvat svih objekata, recenzija i događaja
     const loadData = async () => {
       try {
         const [oRes, rRes, eRes] = await Promise.all([
@@ -243,20 +255,25 @@ export default {
       }
     }
 
+    // Samo objekti čiji VlasnikID odgovara prijavljenom korisniku
     const myObjects = computed(() =>
       objects.value.filter(o => o.VlasnikID === mainUser.value?.id)
     )
 
+    // ID-evi mojih objekata – koriste se za filtriranje događaja
     const myObjectIds = computed(() => myObjects.value.map(o => o.id))
 
+    // Samo događaji vezani uz objekte ovog vlasnika
     const myEvents = computed(() =>
       events.value.filter(e => myObjectIds.value.includes(e.ObjektID))
     )
 
+    // Opcije za select u dijalogu – id i naziv objekta
     const objectOptions = computed(() =>
       myObjects.value.map(o => ({ id: o.id, label: o.NazivObjekta }))
     )
 
+    // Pomoćne funkcije za statistiku pojedinog objekta
     const getReviewsFor = (id) =>
       reviews.value.filter(r => r.ObjektID === id)
 
@@ -271,16 +288,19 @@ export default {
     const getEventCount = (id) =>
       events.value.filter(e => e.ObjektID === id).length
 
+    // Ukupan broj recenzija svih mojih objekata
     const totalReviews = computed(() =>
       myObjects.value.reduce((s, o) => s + getReviewCount(o.id), 0)
     )
 
+    // Prosječna ocjena izračunata iz svih recenzija svih mojih objekata
     const overallAvg = computed(() => {
       const allReviews = myObjects.value.flatMap(o => getReviewsFor(o.id))
       if (allReviews.length === 0) return 0
       return allReviews.reduce((s, r) => s + Number(r.Ocjena), 0) / allReviews.length
     })
 
+    // Podaci za 4 statistike kartice na vrhu
     const summaryStats = computed(() => [
       { label: 'Moji objekti', value: myObjects.value.length, bg: 'bg-purple-1' },
       { label: 'Događaji', value: myEvents.value.length, bg: 'bg-green-1' },
@@ -288,11 +308,13 @@ export default {
       { label: 'Pr. ocjena', value: overallAvg.value.toFixed(1), bg: 'bg-blue-1' }
     ])
 
+    // Postavlja objekt za brisanje i otvara dialog za potvrdu
     const confirmDelete = (obj) => {
       objectToDelete.value = obj
       deleteDialog.value = true
     }
 
+    // Brisanje objekta i uklanjanje iz lokalne liste
     const deleteObject = async () => {
       try {
         await fetch(`${API}/api/objects/${objectToDelete.value.id}`, {
@@ -307,13 +329,14 @@ export default {
       }
     }
 
+    // Validacija obaveznih polja, slanje i resetiranje forme
     const saveEvent = async () => {
       if (
         !newEvent.value.ObjektID ||
         !newEvent.value.NazivDogadaja ||
         !newEvent.value.DatumDogadaja
       ) {
-        return
+        return  // obavezna polja nisu popunjena
       }
       try {
         await fetch(`${API}/api/dogadjaji`, {
@@ -321,6 +344,7 @@ export default {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newEvent.value)
         })
+        // Osvježi sve podatke i zatvori dialog
         await loadData()
         eventDialog.value = false
         newEvent.value = {
@@ -334,6 +358,7 @@ export default {
       }
     }
 
+    // Brisanje događaja i uklanjanje iz lokalne liste
     const deleteEvent = async (id) => {
       try {
         await fetch(`${API}/api/dogadjaji/${id}`, { method: 'DELETE' })
@@ -343,6 +368,7 @@ export default {
       }
     }
 
+    // Formatiranje datuma u hrvatski format s vremenom (dd. mm. yyyy. hh:mm)
     const formatDate = (iso) => {
       if (!iso) return '—'
       const d = new Date(iso)
