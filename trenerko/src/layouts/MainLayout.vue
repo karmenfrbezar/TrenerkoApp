@@ -65,6 +65,11 @@
             label="Admin"
             to="/admin"
           />
+
+          <!-- Pomoć -->
+          <q-btn flat icon="help_outline" label="Pomoć"
+            href="https://docs.google.com/document/d/11mMRTBgrm7RQJqY0dTs_wZyr-S4d-54U/edit?usp=sharing"
+            target="_blank" type="a" />
         </div>
 
         <q-space />
@@ -177,6 +182,16 @@
             <q-icon name="shield" color="orange" />
           </q-item-section>
           <q-item-section>Admin</q-item-section>
+        </q-item>
+
+        <!-- Pomoć -->
+        <q-item clickable v-ripple tag="a"
+          href="https://docs.google.com/document/d/11mMRTBgrm7RQJqY0dTs_wZyr-S4d-54U/edit?usp=sharing"
+          target="_blank">
+          <q-item-section avatar>
+            <q-icon name="help_outline" color="blue" />
+          </q-item-section>
+          <q-item-section>Pomoć</q-item-section>
         </q-item>
 
         <q-separator class="q-my-sm" />

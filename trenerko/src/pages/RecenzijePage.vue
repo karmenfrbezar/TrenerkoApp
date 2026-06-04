@@ -10,7 +10,7 @@
         rounded
       />
       <q-btn
-v-if="mainUser && mainUser.role === 'Korisnik'"
+        v-if="mainUser && mainUser.role === 'Korisnik'"
         label="Dodaj recenziju"
         :flat="view !== 'add'"
         :color="view === 'add' ? 'primary' : 'grey-7'"
@@ -18,7 +18,7 @@ v-if="mainUser && mainUser.role === 'Korisnik'"
         rounded
       />
       <q-btn
-  v-if="mainUser && mainUser.role === 'Korisnik'"
+        v-if="mainUser && (mainUser.role === 'Korisnik' || mainUser.role === 'Admin')"
         label="Obriši recenziju"
         :flat="view !== 'delete'"
         :color="view === 'delete' ? 'primary' : 'grey-7'"
@@ -30,7 +30,6 @@ v-if="mainUser && mainUser.role === 'Korisnik'"
     <div class="row justify-center">
       <div style="width: 100%; max-width: 600px;">
 
-        <!-- POPIS RECENZIJA -->
         <div v-if="view === 'list'">
           <q-input
             v-model="filterText"
@@ -73,7 +72,6 @@ v-if="mainUser && mainUser.role === 'Korisnik'"
           </q-card>
         </div>
 
-        <!-- FORMA ZA DODAJ / UREDI -->
         <q-card v-if="view === 'add' || view === 'edit'" class="q-pa-md" style="border-radius: 15px;">
           <q-select
             v-if="view === 'add'"
@@ -114,9 +112,8 @@ v-if="mainUser && mainUser.role === 'Korisnik'"
           </div>
         </q-card>
 
-        <!-- BRISANJE -->
         <div v-if="view === 'delete'">
-          <q-card v-for="r in recenzije.filter(r => +r.KorisnikID === +mainUser.id)" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
+          <q-card v-for="r in recenzije.filter(r => mainUser && (mainUser.role === 'Admin' || +r.KorisnikID === +mainUser.id))" :key="r.RecenzijaID" class="q-pa-md q-mb-md" style="border-radius: 15px;">
             <b>{{ r.NazivObjekta }}</b>
             <small> — {{ r.username }}</small><br />
             {{ r.Komentar }}
@@ -209,7 +206,10 @@ export default {
     },
 
     canDelete(r) {
-      return this.mainUser && r.KorisnikID === this.mainUser.id;
+      return this.mainUser && (
+        +r.KorisnikID === +this.mainUser.id ||
+        this.mainUser.role === 'Admin'
+      );
     },
 
     editRecenzija(r) {
