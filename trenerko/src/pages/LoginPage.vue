@@ -94,7 +94,7 @@
       <div class="text-center text-caption text-grey-6">
         Nemate račun?
         <router-link
-          to="/register"
+          to="/registracija"
           class="text-deep-purple-8"
           style="text-decoration:none; font-weight:500;"
         >
